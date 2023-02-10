@@ -13,19 +13,20 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-#########################################################################
-# Be Sure to set all these params prior to running application          #
-#########################################################################
+############################################################################################
+# Be Sure to set all these params prior to running application                            #
+############################################################################################
 begin_time = time(5,0)
 end_time = time(23,15)
-# begin_time = time(22,0)
-# end_time = time(22,15)
+# begin_time = time(22,0) # When should it start logging in and clicking "Get Slots"
+# end_time = time(22,15) # When should it stop trying to get a tee time
 max_try = 1 # change back to 500 when working
 course_number = int(10) # course No; cradle is 10
-desired_tee_time = '08:24 AM' # tee time in this format '08:24 AM'
-reservation_day = int(10) # day of current month to book
+desired_tee_time = '08:24 AM' # tee time in this format 'hh:mm AM'
+reservation_day = int(11) # day of current month to book
 is_current_month = True # False when reservation_day is for next month
-#########################################################################
+num_of_players = 2  # Only allows 2 at the moment
+############################################################################################
 
 options = Options()
 # comment out this line to see the process in chrome
@@ -40,7 +41,6 @@ driver = webdriver.Chrome(
 )
 
 est = timezone(timedelta(hours=-8), 'EST')
-
 
 def check_current_time(begin_time:time, end_time:time) -> Tuple[time, bool]:
     '''
@@ -76,6 +76,7 @@ def make_a_reservation() -> bool:
         
 	# Navigate to tee-sheet
         driver.get(os.environ.get('TEESHEET_URL'))
+
   ## Wait to let page load
         sleep(2) ## try to shave down a few .5 seconds later
         
@@ -100,39 +101,35 @@ def make_a_reservation() -> bool:
         # get slots
         driver.find_element(By.CLASS_NAME, "submit-button").click()
         
-## Wait to let page load
+## Wait to let page refresh
         sleep(1) ## try to shave down a few .5 seconds later
         
-        # select tee time
-        slotTime = "08:27 AM"
-        ## init desired slot index
         slotIndex = int(1)
+        ## obtain all open slots and find desired slot
         allAvlSlots = driver.find_elements(By.CLASS_NAME, "available-slot:not(.booked-slot)")
-        ## loop through the slots
         for i, slot in enumerate(allAvlSlots):
           try:
-            # div = slot.find_element(By.TAG_NAME, "div")
             div = slot.find_element(By.CLASS_NAME, "schedule-time")
-            ## find desired_tee_time
-            if div.text == slotTime:
-                ## store slot index in desired slot number
+            if div.text == desired_tee_time:
+                ## store slot index of desired slot number
                 slotIndex = i
-                print(f"The element with text {slotTime} was found at index {i}")
+                print(f"The element with text {desired_tee_time} was found at index {i}")
             break
           except NoSuchElementException:
             pass
         else:
-            print(f"The element with text {slotTime} was not found")
+            print(f"The element with text {desired_tee_time} was not found")
+
         ## Click the button in the slot index
         allAvlSlots[slotIndex].find_element(By.CLASS_NAME, "submit-button").click()
-        # selects date in date picker
+
+        # selects number of players
         overlayPane = driver.find_element(By.CLASS_NAME, "guest-container")
-        # overlayPane = driver.find_element(By.CLASS_NAME, "cdk-overlay-pane")
-        # num_players = overlayPane.find_elements(By.CLASS_NAME, "mat-focus-indicator")
         num_players = overlayPane.find_elements(By.TAG_NAME, "li") 
-        num_players[1].click()
+        num_players[num_of_players-1].click()
 ## Wait to let page load        
-        sleep(1) 
+        sleep(1)
+
 # Navigate to shopping cart
         guestInfoCont = driver.find_element(By.CLASS_NAME, "guest-info-container")
         elements = guestInfoCont.find_elements(By.CLASS_NAME, "mat-icon.mat-icon")
