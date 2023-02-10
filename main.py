@@ -21,9 +21,9 @@ end_time = time(23,15)
 # begin_time = time(22,0) # When should it start logging in and clicking "Get Slots"
 # end_time = time(22,15) # When should it stop trying to get a tee time
 max_try = 1 # change back to 500 when working
-course_number = int(10) # course No; cradle is 10
-desired_tee_time = '03:27 PM' # tee time in this format 'hh:mm AM'
-reservation_day = int(11) # day of current month to book
+course_number = int(7) # course No; cradle is 10
+desired_tee_time = '10:15 AM' # tee time in this format 'hh:mm AM'
+reservation_day = int(12) # day of current month to book
 is_current_month = True # False when reservation_day is for next month
 num_of_players = 2  # Only allows 2 at the moment
 ############################################################################################
@@ -105,13 +105,13 @@ def make_a_reservation() -> bool:
         sleep(1) ## try to shave down a few .5 seconds later
         
         def select_num_players(driver, desired_tee_time, num_of_players):
+          try:
             slotIndex = int(1)
             ## obtain all open slots and find desired slot
             allAvlSlots = driver.find_elements(By.CLASS_NAME, "available-slot:not(.booked-slot)")
             for i, slot in enumerate(allAvlSlots):
               try:
                 div = slot.find_element(By.CLASS_NAME, "schedule-time")
-                print(div.text)
                 if div.text == desired_tee_time:
                     ## store slot index of desired slot number
                     slotIndex = i
@@ -122,27 +122,38 @@ def make_a_reservation() -> bool:
             else:
                 print(f"The element with text {desired_tee_time} was not found")
 
-            ## Click the button in the slot index
+            ## Click BOOK in the slot index
             allAvlSlots[slotIndex].find_element(By.CLASS_NAME, "submit-button").click()
-            sleep(.5)
+            sleep(1)
             # selects number of players
-            overlayPane = driver.find_element(By.CLASS_NAME, "guest-container")
-            num_players = overlayPane.find_elements(By.TAG_NAME, "li")
+            guestPane = driver.find_element(By.CLASS_NAME, "guest-container")
+            num_players = guestPane.find_elements(By.TAG_NAME, "li")
             num_players[num_of_players-1].click()
+            return None
+          except Exception as e:
+            print(f'select players had an error {e}')
+            return None
 
         # # Get the scroll container element
         scrollCont = driver.find_element(By.ID, "scrollContainer")
 
         # # Get the height of the scroll container
         scroll_height = driver.execute_script("return arguments[0].scrollHeight", scrollCont)
-
+        print('before')
+        selectedPlayer = False
         # Scroll through the container until the desired text is found or until you've reached the bottom
-        while True:
+        while not selectedPlayer:
             for element in driver.find_elements(By.XPATH, f"//*[contains(text(), '{desired_tee_time}')]"):
-                if element.is_displayed():
-                    print(f"Found the desired text: {element.text}")
-                    select_num_players(driver, desired_tee_time, num_of_players)
-                    break
+                print(element)
+                try:
+                  if element.is_displayed():
+                      print(f"Found the desired text: {element.text}")
+                      select_num_players(driver, desired_tee_time, num_of_players)
+                      selectedPlayer = True
+                      break
+                except Exception as e:
+                  print(f'select tee time had an error {e}')
+                  break
             else:
                 # If the element was not found, scroll the container
                 driver.execute_script("arguments[0].scrollTop += arguments[0].offsetHeight", scrollCont)
@@ -155,6 +166,7 @@ def make_a_reservation() -> bool:
 
 # Navigate to shopping cart
         guestInfoCont = driver.find_element(By.CLASS_NAME, "guest-info-container")
+        print('im here')
         elements = guestInfoCont.find_elements(By.CLASS_NAME, "mat-icon.mat-icon")
         elements[1].click()
 ## Wait to let page load        
@@ -222,7 +234,8 @@ def try_booking() -> None:
           current_time, is_during_running_time = check_current_time(begin_time, end_time)
           continue
 
-      print(f'----- try : {try_num} for {desired_tee_time} tee time on course {course_number} {current_time}-----')
+      print(f'----- try : {try_num} for {desired_tee_time} tee time on course {course_number} -----')
+      print(f'The current time is {current_time}')
       # try to get tee time
       reservation_completed = make_a_reservation()
 
