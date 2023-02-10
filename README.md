@@ -18,3 +18,12 @@ Set all the params in the top of `main.py`
 
 ### Notes
 Modeled after [this](https://medium.com/@ryujimorita.1009/how-i-built-a-booking-automation-bot-to-get-a-popular-cafe-admission-ticket-851bb2f9eac0)
+
+
+### Troubleshooting
+says selenium modual is not installed
+
+```
+$ echo $VIRTUAL_ENV
+$ source activate <VIRTUAL_ENV>
+```
