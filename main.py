@@ -78,7 +78,7 @@ def make_a_reservation() -> bool:
         driver.get(os.environ.get('TEESHEET_URL'))
 
   ## Wait to let page load
-        sleep(2) ## try to shave down a few .5 seconds later
+        sleep(1.5) ## try to shave down a few .5 seconds later
         
         allBookButtons = driver.find_elements(By.CLASS_NAME, "book__now__btn")
         allBookButtons[course_number-1].click()
@@ -104,7 +104,7 @@ def make_a_reservation() -> bool:
 ## Wait to let page refresh
         sleep(1) ## try to shave down a few .5 seconds later
         
-        def select_num_players(driver, desired_tee_time, num_of_players):
+        def select_num_players(driver, desired_tee_time, num_of_players) -> None:
           try:
             slotIndex = int(1)
             ## obtain all open slots and find desired slot
@@ -162,11 +162,10 @@ def make_a_reservation() -> bool:
                     break
 
 ## Wait to let page load        
-        sleep(1)
+        sleep(1.5)
 
 # Navigate to shopping cart
         guestInfoCont = driver.find_element(By.CLASS_NAME, "guest-info-container")
-        print('im here')
         elements = guestInfoCont.find_elements(By.CLASS_NAME, "mat-icon.mat-icon")
         elements[1].click()
 ## Wait to let page load        
@@ -179,10 +178,9 @@ def make_a_reservation() -> bool:
         for i in range(len(buttons)):
             button = buttons[i]
             try:
-              print('before', button.text)
               if button.text == 'PROCEED':
                   buttonIndex = i
-                  print(f"The element with text was found at index {i}")
+                  print(f"The element with PROCEED was found at index {i}")
               break
             except NoSuchElementException:
               pass
@@ -193,17 +191,15 @@ def make_a_reservation() -> bool:
 # Navigate to confirmation page
         buttons[buttonIndex].click()
 ## Wait to let page load
-        sleep(60)
+        # sleep(60)
 		
         return True
     except Exception as e:
-        sleep(10)
         print(e)
         return False
     finally:
 	# close the drivers
         driver.quit()
-
 
 # login and check the time and click 'get slots' to keep page active
 def try_booking() -> None:
@@ -214,9 +210,9 @@ def try_booking() -> None:
     current_time, is_during_running_time = check_current_time(begin_time, end_time)
     reservation_completed = False
     try_num = 1
+    bot_start_time=datetime.now()
+    bot_stop_time=datetime.now()
     
-    # TODO: Login here so that it doesn't lock out my account
-    # TODO: repeat hitting 'get slots' until 
     # repreat booking a reservation every second
     while True:
       if not is_during_running_time:
@@ -234,18 +230,22 @@ def try_booking() -> None:
           current_time, is_during_running_time = check_current_time(begin_time, end_time)
           continue
 
-      print(f'----- try : {try_num} for {desired_tee_time} tee time on course {course_number} -----')
+      print(f'----- try : {try_num} for {desired_tee_time} tee time on course No. {course_number} -----')
       print(f'The current time is {current_time}')
+      bot_start_time=datetime.now()
       # try to get tee time
       reservation_completed = make_a_reservation()
 
       if reservation_completed:
           current_time, is_during_running_time = check_current_time(begin_time, end_time)
-          print(f'Got a ticket!! {current_time}')
+          bot_stop_time=datetime.now()
+          delta = bot_stop_time - bot_start_time
+          seconds = delta.total_seconds()
+          print(f'Got a tee time in {seconds} seconds')
           break
       elif try_num == max_try:
           sleep(20)
-          print(f'Tried {try_num} times, but couldn\'t get tickets..')
+          print(f'Tried {try_num} times, but couldn\'t get the tee time..')
           break
       else:
           sleep(1)
