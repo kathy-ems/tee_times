@@ -9,7 +9,6 @@ python = "^3.9"
 joblib = "^1.2.0"
 webdriver-manager = "^3.8.5"
 python-dotenv = "^0.21.1"
-selenium = "^4.8.0"
 
 [tool.poetry.dev-dependencies]
 selenium = "^4.8.0"

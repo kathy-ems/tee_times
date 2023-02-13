@@ -16,12 +16,12 @@ load_dotenv()
 ############################################################################################
 # Be Sure to set all these params prior to running application                            #
 ############################################################################################
-begin_time = time(21,57) # When should it start reserving a tee time
+begin_time = time(9,57) # When should it start reserving a tee time
 end_time = time(22,7) # When should it stop trying to get a tee time
 max_try = 1 # change back to 500 when working
-course_number = int(7) # course No; cradle is 10
-desired_tee_time = '10:15 AM' # tee time in this format 'hh:mm AM'
-reservation_day = int(12) # day of current month to book
+course_number = int(5) # course No; cradle is 10
+desired_tee_time = '03:04 PM' # tee time in this format 'hh:mm AM'
+reservation_day = int(20) # day of current month to book
 is_current_month = True # False when reservation_day is for next month
 num_of_players = 2  # Only allows 2 at the moment
 ############################################################################################
