@@ -210,17 +210,9 @@ def make_a_reservation() -> bool:
         sleep(.5)
 # Navigate to confirmation page
         buttons[buttonIndex].click()
-    except Exception as e:
-        print(f'Unable to move to confirmation page: {e}')
-        return None
-      
-    try:
-## Wait to let page load
-        # sleep(60)
-		
+## Wait to let page load		
         return True
     except Exception as e:
-        sleep(15)
         print(e)
         return False
     finally:
