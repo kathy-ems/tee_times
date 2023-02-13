@@ -16,10 +16,8 @@ load_dotenv()
 ############################################################################################
 # Be Sure to set all these params prior to running application                            #
 ############################################################################################
-begin_time = time(5,0)
-end_time = time(23,15)
-# begin_time = time(22,0) # When should it start logging in and clicking "Get Slots"
-# end_time = time(22,15) # When should it stop trying to get a tee time
+begin_time = time(21,57) # When should it start reserving a tee time
+end_time = time(22,7) # When should it stop trying to get a tee time
 max_try = 1 # change back to 500 when working
 course_number = int(7) # course No; cradle is 10
 desired_tee_time = '10:15 AM' # tee time in this format 'hh:mm AM'
@@ -85,6 +83,8 @@ def make_a_reservation() -> bool:
        
 ## Wait to let page load
         sleep(2) ## try to shave down a few .5 seconds later
+
+        # TODO: allow picking next month's date
        
         # select end tee time date
         date_inputs = driver.find_elements(By.TAG_NAME, "input")
@@ -122,7 +122,7 @@ def make_a_reservation() -> bool:
             else:
                 print(f"The element with text {desired_tee_time} was not found")
 
-            ## Click BOOK in the slot index
+            ## Click BOOK in the target slot
             allAvlSlots[slotIndex].find_element(By.CLASS_NAME, "submit-button").click()
             sleep(1)
             # selects number of players
@@ -139,12 +139,10 @@ def make_a_reservation() -> bool:
 
         # # Get the height of the scroll container
         scroll_height = driver.execute_script("return arguments[0].scrollHeight", scrollCont)
-        print('before')
         selectedPlayer = False
         # Scroll through the container until the desired text is found or until you've reached the bottom
         while not selectedPlayer:
             for element in driver.find_elements(By.XPATH, f"//*[contains(text(), '{desired_tee_time}')]"):
-                print(element)
                 try:
                   if element.is_displayed():
                       print(f"Found the desired text: {element.text}")
