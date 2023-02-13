@@ -58,7 +58,7 @@ def make_a_reservation() -> bool:
     try:
         driver.get(os.environ.get('URL'))
   ## Wait to let page load
-        sleep(2)
+        sleep(3)
         
 	# fill in the username and password
         input_box = driver.find_element(By.ID, 'mat-input-2')
@@ -68,11 +68,15 @@ def make_a_reservation() -> bool:
         input_box.clear()
         input_box.send_keys(os.environ.get('PASSWORD'))
         driver.find_element(By.TAG_NAME, 'button').click()
-        
+    except Exception as e:
+        print(f'Unable to login {e}')
+        return None
+      
+    try:
   ## Wait to let page load
-        sleep(.5)
-        
-	# Navigate to tee-sheet
+        sleep(1)
+
+	# Navigate to COURSE LISTINGS
         driver.get(os.environ.get('TEESHEET_URL'))
 
   ## Wait to let page load
@@ -80,9 +84,14 @@ def make_a_reservation() -> bool:
         
         allBookButtons = driver.find_elements(By.CLASS_NAME, "book__now__btn")
         allBookButtons[course_number-1].click()
-       
-## Wait to let page load
-        sleep(2) ## try to shave down a few .5 seconds later
+    except Exception as e:
+        print(f'Unable to select course {e}')
+        return None
+      
+    try:
+  # Navigate to TEE SHEET
+  ## Wait to let page load
+        sleep(3) ## try to shave down a few .5 seconds later
 
         # TODO: allow picking next month's date
        
@@ -100,9 +109,13 @@ def make_a_reservation() -> bool:
         td_days[reservation_day].click()
         # get slots
         driver.find_element(By.CLASS_NAME, "submit-button").click()
-        
+    except Exception as e:
+        print(f'Unable to select dates {e}')
+        return None
+      
+    try:
 ## Wait to let page refresh
-        sleep(1) ## try to shave down a few .5 seconds later
+        sleep(1.5) ## try to shave down a few .5 seconds later
         
         def select_num_players(driver, desired_tee_time, num_of_players) -> None:
           try:
@@ -158,7 +171,11 @@ def make_a_reservation() -> bool:
                 # Check if you've reached the bottom of the container
                 if driver.execute_script(f"return arguments[0].scrollTop", scrollCont) == scroll_height:
                     break
-
+    except Exception as e:
+        print(f'Unable to number of players {e}')
+        return None
+      
+    try:
 ## Wait to let page load        
         sleep(1.5)
 
@@ -166,6 +183,12 @@ def make_a_reservation() -> bool:
         guestInfoCont = driver.find_element(By.CLASS_NAME, "guest-info-container")
         elements = guestInfoCont.find_elements(By.CLASS_NAME, "mat-icon.mat-icon")
         elements[1].click()
+
+    except Exception as e:
+        print(f'Unable to {num_of_players} of players {e}')
+        return None
+      
+    try:
 ## Wait to let page load        
         sleep(.5)
         
@@ -178,7 +201,6 @@ def make_a_reservation() -> bool:
             try:
               if button.text == 'PROCEED':
                   buttonIndex = i
-                  print(f"The element with PROCEED was found at index {i}")
               break
             except NoSuchElementException:
               pass
@@ -188,11 +210,17 @@ def make_a_reservation() -> bool:
         sleep(.5)
 # Navigate to confirmation page
         buttons[buttonIndex].click()
+    except Exception as e:
+        print(f'Unable to move to confirmation page: {e}')
+        return None
+      
+    try:
 ## Wait to let page load
         # sleep(60)
 		
         return True
     except Exception as e:
+        sleep(15)
         print(e)
         return False
     finally:
