@@ -6,6 +6,9 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
 from joblib import Parallel, delayed
 from selenium.webdriver.common.by import By
 import os
@@ -19,11 +22,11 @@ load_dotenv()
 begin_time = time(9,57) # When should it start reserving a tee time
 end_time = time(22,7) # When should it stop trying to get a tee time
 max_try = 1 # change back to 500 when working
-course_number = int(5) # course No; cradle is 10
-desired_tee_time = '03:04 PM' # tee time in this format 'hh:mm AM'
-reservation_day = int(20) # day of current month to book
+course_number = int(4) # course No; cradle is 10
+desired_tee_time = '11:20 AM' # tee time in this format 'hh:mm AM'
+reservation_day = int(13) # day of current month to book
 is_current_month = True # False when reservation_day is for next month
-num_of_players = 2  # Only allows 2 at the moment
+num_of_players = 2  # Only allows 1-2 players at the moment
 ############################################################################################
 
 options = Options()
@@ -55,12 +58,13 @@ def make_a_reservation() -> bool:
     Make a reservation for the given time and name at the booking site.
     Return the status if the reservation is made successfully or not.
     '''
+    # MAIN PAGE
     try:
         driver.get(os.environ.get('URL'))
-  ## Wait to let page load
-        sleep(3)
+        wait = WebDriverWait(driver, 10)
+        element = wait.until(EC.presence_of_element_located((By.ID, 'mat-input-3')))
         
-	# fill in the username and password
+	      # fill in the username and password
         input_box = driver.find_element(By.ID, 'mat-input-2')
         input_box.clear()
         input_box.send_keys(os.environ.get('USERNAME'))
@@ -69,53 +73,58 @@ def make_a_reservation() -> bool:
         input_box.send_keys(os.environ.get('PASSWORD'))
         driver.find_element(By.TAG_NAME, 'button').click()
     except Exception as e:
-        print(f'Unable to login {e}')
-        return None
-      
-    try:
-  ## Wait to let page load
-        sleep(1)
+        print(f'Unable to log in: {e}')
+        return False
 
-	# Navigate to COURSE LISTINGS
+    # COURSE LISTINGS PAGE
+    try:
+        sleep(1) ## Wait to let page load before navigating to new page
         driver.get(os.environ.get('TEESHEET_URL'))
 
-  ## Wait to let page load
-        sleep(1.5) ## try to shave down a few .5 seconds later
-        
+        wait = WebDriverWait(driver, 6) ## Wait to let page load
+        wait.until(EC.presence_of_element_located((By.ID, "bookNowAccords")))
+        sleep(1.5) ## required
         allBookButtons = driver.find_elements(By.CLASS_NAME, "book__now__btn")
         allBookButtons[course_number-1].click()
     except Exception as e:
-        print(f'Unable to select course {e}')
-        return None
+        print(f'Unable to select course: {e}')
+        return False
       
+    # TEE SHEET WITH TEE TIMES
     try:
-  # Navigate to TEE SHEET
-  ## Wait to let page load
-        sleep(3) ## try to shave down a few .5 seconds later
-
-        # TODO: allow picking next month's date
-       
-        # select end tee time date
+        sleep(1) ## Wait to let page load
+    
+        # Open end tee time calendar
         date_inputs = driver.find_elements(By.TAG_NAME, "input")
         date_inputs[1].click()
-        # selects date in date picker
+    except Exception as e:
+        print(f'Unable to select 1st end date: {e}')
+        return False
+      
+    try:
+        # select end date in date picker
         td_days = driver.find_elements(By.TAG_NAME, "td")
         td_days[reservation_day].click()
-        # select start tee time date
+    except Exception as e:
+        print(f'Unable to select 2nd end date: {e}')
+        return False
+      
+    try:
+        # Open start tee time Calendar
         date_inputs = driver.find_elements(By.TAG_NAME, "input")
         date_inputs[0].click()
-        # selects date in date picker
+        # select start date in date picker
         td_days = driver.find_elements(By.TAG_NAME, "td")
         td_days[reservation_day].click()
         # get slots
         driver.find_element(By.CLASS_NAME, "submit-button").click()
     except Exception as e:
-        print(f'Unable to select dates {e}')
-        return None
-      
+        print(f'Unable to select start date: {e}')
+        return False
+
+    # SELECT PLAYERS IN TEE SHEET & CLICK BOOK
     try:
-## Wait to let page refresh
-        sleep(1.5) ## try to shave down a few .5 seconds later
+        sleep(1) ## Wait to let page refresh
         
         def select_num_players(driver, desired_tee_time, num_of_players) -> None:
           try:
@@ -142,13 +151,16 @@ def make_a_reservation() -> bool:
             guestPane = driver.find_element(By.CLASS_NAME, "guest-container")
             num_players = guestPane.find_elements(By.TAG_NAME, "li")
             num_players[num_of_players-1].click()
-            return None
+            return False
           except Exception as e:
             print(f'select players had an error {e}')
-            return None
+            return False
 
+        root_element = driver.find_element(By.TAG_NAME, "app-root")
+        inner_div_element = root_element.find_element(By.TAG_NAME, "div")
+        innermost_div_element = inner_div_element.find_element(By.TAG_NAME, "div")
         # # Get the scroll container element
-        scrollCont = driver.find_element(By.ID, "scrollContainer")
+        scrollCont = innermost_div_element.find_element(By.ID, "scrollContainer")
 
         # # Get the height of the scroll container
         scroll_height = driver.execute_script("return arguments[0].scrollHeight", scrollCont)
@@ -173,27 +185,29 @@ def make_a_reservation() -> bool:
                     break
     except Exception as e:
         print(f'Unable to number of players {e}')
-        return None
-      
+        return False
+
+    # GUEST INFO PAGE / SHOPPING CART
     try:
-## Wait to let page load        
-        sleep(1.5)
-
-# Navigate to shopping cart
-        guestInfoCont = driver.find_element(By.CLASS_NAME, "guest-info-container")
-        elements = guestInfoCont.find_elements(By.CLASS_NAME, "mat-icon.mat-icon")
-        elements[1].click()
-
+        sleep(1.5) ## Wait to let page load
+        wait = WebDriverWait(driver, 10)
+        element = wait.until(EC.presence_of_element_located((By.CLASS_NAME, "loader-hidden")))
+        # Choose extra players
+        if num_of_players == 2:
+            root_element = driver.find_element(By.TAG_NAME, "app-root")
+            inner_div_element = root_element.find_element(By.TAG_NAME, "div")
+            innermost_div_element = inner_div_element.find_element(By.TAG_NAME, "div")
+            guestInfoCont = innermost_div_element.find_element(By.CLASS_NAME, "guest-info-container")
+            elements = guestInfoCont.find_elements(By.CLASS_NAME, "mat-icon.mat-icon")
+            elements[1].click()
     except Exception as e:
         print(f'Unable to {num_of_players} of players {e}')
-        return None
-      
+        return False
+
     try:
-## Wait to let page load        
-        sleep(.5)
-        
+        sleep(.5) ## Wait to let page load  
         # click proceed button
-        shoppingCont = guestInfoCont.find_element(By.CLASS_NAME, "shopping-cart-container")
+        shoppingCont = driver.find_element(By.CLASS_NAME, "shopping-cart-container")
         buttons = shoppingCont.find_elements(By.TAG_NAME, "button")
         buttonIndex = int(1) ## cancel by default
         for i in range(len(buttons)):
@@ -205,12 +219,34 @@ def make_a_reservation() -> bool:
             except NoSuchElementException:
               pass
         else:
-            print(f"The element with text was not found")
-## Wait to let page load        
-        sleep(.5)
-# Navigate to confirmation page
+            print(f"The PROCEED button was not found")
         buttons[buttonIndex].click()
-## Wait to let page load		
+
+        # CONFIRMATION PAGE
+        try: 
+            wait = WebDriverWait(driver, 10) ## Wait to let page load
+            element = wait.until(EC.presence_of_element_located((By.CLASS_NAME, "loader-hidden")))        
+            # Find Confirm button
+            shoppingCont = driver.find_element(By.CLASS_NAME, "booking-details-container")
+            confirm_page_buttons = shoppingCont.find_elements(By.TAG_NAME, "button")
+            confirm_buttonIndex = int(1) ## cancel by default
+            for i in range(len(confirm_page_buttons)):
+                button = confirm_page_buttons[i]
+                try:
+                  if button.text == 'CONFIRM':
+                      confirm_buttonIndex = i
+                  break
+                except NoSuchElementException:
+                  pass
+            else:
+                print(f"The CONFIRM button was not found")
+          
+            # Click confirm button
+            confirm_page_buttons[confirm_buttonIndex].click()
+            sleep(4) ## Wait to let page load - required to finalize booking
+        except Exception as e:
+            print(f'Unable to confirm {e}')
+            return False   
         return True
     except Exception as e:
         print(e)
@@ -231,7 +267,7 @@ def try_booking() -> None:
     bot_start_time=datetime.now()
     bot_stop_time=datetime.now()
     
-    # repreat booking a reservation every second
+    # repeat booking a reservation every second
     while True:
       if not is_during_running_time:
           print(f'Not Running the program. It is {current_time} and not between {begin_time} and {end_time}')

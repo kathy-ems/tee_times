@@ -36,5 +36,5 @@ $ source ./.venv/bin/activate
 $ pip3 uninstall selenium
 $ pip3 install selenium
 $ echo $VIRTUAL_ENV
-$ source activate <VIRTUAL_ENV>
+$ source activate $VIRTUAL_ENV
 ```
