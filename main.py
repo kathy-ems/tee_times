@@ -21,25 +21,15 @@ load_dotenv()
 ############################################################################################
 begin_time = time(9,57) # When should it start reserving a tee time
 end_time = time(22,7) # When should it stop trying to get a tee time
-max_try = 1 # change back to 500 when working
-course_number = int(4) # course No; cradle is 10
-desired_tee_time = '11:20 AM' # tee time in this format 'hh:mm AM'
-reservation_day = int(13) # day of current month to book
+max_try = 2 # change back to 500 when working
+course_number = int(7) # course No; cradle is 10
+desired_tee_time = '07:06 AM' # tee time in this format 'hh:mm AM'
+reservation_day = int(10) # day of current month to book
 is_current_month = True # False when reservation_day is for next month
 num_of_players = 2  # Only allows 1-2 players at the moment
+book_first_avail = True # Book the first available tee time on this course
+testing_mode = True # True will not book the round
 ############################################################################################
-
-options = Options()
-# comment out this line to see the process in chrome
-# options.add_argument('--headless')
-
-driver = webdriver.Chrome(
-  service=Service(
-    ChromeDriverManager()
-                  .install()
-  ),
-   options=options
-)
 
 est = timezone(timedelta(hours=-8), 'EST')
 
@@ -58,6 +48,19 @@ def make_a_reservation() -> bool:
     Make a reservation for the given time and name at the booking site.
     Return the status if the reservation is made successfully or not.
     '''
+    options = Options()
+    # comment out this line to see the process in chrome
+    if testing_mode == False:
+        options.add_argument('--headless')
+
+    driver = webdriver.Chrome(
+      service=Service(
+        ChromeDriverManager()
+                      .install()
+      ),
+      options=options
+    )
+
     # MAIN PAGE
     try:
         driver.get(os.environ.get('URL'))
@@ -78,7 +81,7 @@ def make_a_reservation() -> bool:
 
     # COURSE LISTINGS PAGE
     try:
-        sleep(1) ## Wait to let page load before navigating to new page
+        sleep(1) # Wait to let page load before navigating to new page
         driver.get(os.environ.get('TEESHEET_URL'))
 
         wait = WebDriverWait(driver, 6) ## Wait to let page load
@@ -125,6 +128,14 @@ def make_a_reservation() -> bool:
     # SELECT PLAYERS IN TEE SHEET & CLICK BOOK
     try:
         sleep(1) ## Wait to let page refresh
+        root_element = driver.find_element(By.TAG_NAME, "app-root")
+        inner_div_element = root_element.find_element(By.TAG_NAME, "div")
+        innermost_div_element = inner_div_element.find_element(By.TAG_NAME, "div")
+        # # Get the scroll container element
+        scrollCont = innermost_div_element.find_element(By.ID, "scrollContainer")
+
+        # # Get the height of the scroll container
+        scroll_height = driver.execute_script("return arguments[0].scrollHeight", scrollCont)
         
         def select_num_players(driver, desired_tee_time, num_of_players) -> None:
           try:
@@ -156,14 +167,6 @@ def make_a_reservation() -> bool:
             print(f'select players had an error {e}')
             return False
 
-        root_element = driver.find_element(By.TAG_NAME, "app-root")
-        inner_div_element = root_element.find_element(By.TAG_NAME, "div")
-        innermost_div_element = inner_div_element.find_element(By.TAG_NAME, "div")
-        # # Get the scroll container element
-        scrollCont = innermost_div_element.find_element(By.ID, "scrollContainer")
-
-        # # Get the height of the scroll container
-        scroll_height = driver.execute_script("return arguments[0].scrollHeight", scrollCont)
         selectedPlayer = False
         # Scroll through the container until the desired text is found or until you've reached the bottom
         while not selectedPlayer:
@@ -240,10 +243,16 @@ def make_a_reservation() -> bool:
                   pass
             else:
                 print(f"The CONFIRM button was not found")
-          
-            # Click confirm button
-            confirm_page_buttons[confirm_buttonIndex].click()
-            sleep(4) ## Wait to let page load - required to finalize booking
+
+            # Test mode will not click confirm
+            if testing_mode == True:
+                sleep(5)
+                print('Testing Mode Complete')
+                return False
+            else:
+                # Click confirm button
+                confirm_page_buttons[confirm_buttonIndex].click()
+                sleep(4) ## Wait to let page load - required to finalize booking
         except Exception as e:
             print(f'Unable to confirm {e}')
             return False   
@@ -260,6 +269,7 @@ def try_booking() -> None:
     '''
     Try booking a reservation until either one reservation is made successfully or the attempt time reaches the max_try
     '''
+    
     # initialize the params
     current_time, is_during_running_time = check_current_time(begin_time, end_time)
     reservation_completed = False
@@ -290,6 +300,7 @@ def try_booking() -> None:
       # try to get tee time
       reservation_completed = make_a_reservation()
 
+      # If no errors
       if reservation_completed:
           current_time, is_during_running_time = check_current_time(begin_time, end_time)
           bot_stop_time=datetime.now()
@@ -297,10 +308,12 @@ def try_booking() -> None:
           seconds = delta.total_seconds()
           print(f'Got a tee time in {seconds} seconds')
           break
-      elif try_num == max_try:
+      # stop trying if max_try is reached
+      elif try_num >= max_try:
           sleep(20)
-          print(f'Tried {try_num} times, but couldn\'t get the tee time..')
+          print(f'Tried {try_num} times, but couldn\'t get the tee time...')
           break
+      # if errors try again
       else:
           sleep(1)
           try_num += 1
