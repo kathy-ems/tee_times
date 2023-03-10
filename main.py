@@ -22,7 +22,7 @@ load_dotenv()
 begin_time = time(9,57) # When should it start reserving a tee time
 end_time = time(22,7) # When should it stop trying to get a tee time
 max_try = 2 # change back to 500 when working
-course_number = int(7) # course No; cradle is 10
+course_number = int(1) # course No; cradle is 10
 desired_tee_time = '07:06 AM' # tee time in this format 'hh:mm AM'
 reservation_day = int(10) # day of current month to book
 is_current_month = True # False when reservation_day is for next month
@@ -131,29 +131,46 @@ def make_a_reservation() -> bool:
         root_element = driver.find_element(By.TAG_NAME, "app-root")
         inner_div_element = root_element.find_element(By.TAG_NAME, "div")
         innermost_div_element = inner_div_element.find_element(By.TAG_NAME, "div")
-        # # Get the scroll container element
+        # Get the scroll container element
         scrollCont = innermost_div_element.find_element(By.ID, "scrollContainer")
-
-        # # Get the height of the scroll container
+        # Get the height of the scroll container
         scroll_height = driver.execute_script("return arguments[0].scrollHeight", scrollCont)
         
+        # SELECT BY TEE TIME
         def select_num_players(driver, desired_tee_time, num_of_players) -> None:
           try:
             slotIndex = int(1)
             ## obtain all open slots and find desired slot
             allAvlSlots = driver.find_elements(By.CLASS_NAME, "available-slot:not(.booked-slot)")
             for i, slot in enumerate(allAvlSlots):
-              try:
-                div = slot.find_element(By.CLASS_NAME, "schedule-time")
-                if div.text == desired_tee_time:
-                    ## store slot index of desired slot number
-                    slotIndex = i
-                    print(f"The element with text {div.text} was found at index {i}")
-                    break
-              except NoSuchElementException:
-                pass
+              # GET BY FIRST AVIALABLE
+              if book_first_avail: 
+                  try: 
+                      chips = slot.find_elements(By.CLASS_NAME, "player-chip-detail")
+                      print(len(chips))
+                      available_spots = 4-len(chips)
+                      if available_spots >= num_of_players:
+                          ## store slot index of desired slot number
+                          slotIndex = i
+                          print(f"The first available tee time was found at index {i}")
+                          break
+                  except Exception as e:
+                      print(f'First available tee time error {e}')
+                      return False
+              # GET BY TEE TIME
+              else:
+                  try:
+                      div = slot.find_element(By.CLASS_NAME, "schedule-time")
+                      if div.text == desired_tee_time:
+                          ## store slot index of desired slot number
+                          slotIndex = i
+                          print(f"The tee time {div.text} was found at index {i}")
+                          break
+                  except Exception as e:
+                      print(f'First available tee time error {e}')
+                      return False
             else:
-                print(f"The element with text {desired_tee_time} was not found")
+                print(f"The available tee time was not found")
 
             ## Click BOOK in the target slot
             allAvlSlots[slotIndex].find_element(By.CLASS_NAME, "submit-button").click()
@@ -162,32 +179,36 @@ def make_a_reservation() -> bool:
             guestPane = driver.find_element(By.CLASS_NAME, "guest-container")
             num_players = guestPane.find_elements(By.TAG_NAME, "li")
             num_players[num_of_players-1].click()
-            return False
+            return None
           except Exception as e:
             print(f'select players had an error {e}')
             return False
 
-        selectedPlayer = False
-        # Scroll through the container until the desired text is found or until you've reached the bottom
-        while not selectedPlayer:
-            for element in driver.find_elements(By.XPATH, f"//*[contains(text(), '{desired_tee_time}')]"):
-                try:
-                  if element.is_displayed():
-                      print(f"Found the desired text: {element.text}")
-                      select_num_players(driver, desired_tee_time, num_of_players)
-                      selectedPlayer = True
+        # BOOK FIRST AVAIALABLE OR BOOK BY TEE TIME
+        if book_first_avail:
+            select_num_players(driver, None, num_of_players)
+        else: 
+            selectedPlayer = False
+            # Scroll through the container until the desired tee time is found or until you've reached the bottom
+            while not selectedPlayer:
+                for element in driver.find_elements(By.XPATH, f"//*[contains(text(), '{desired_tee_time}')]"):
+                    try:
+                      if element.is_displayed():
+                          print(f"Found the desired text: {element.text}")
+                          select_num_players(driver, desired_tee_time, num_of_players)
+                          selectedPlayer = True
+                          break
+                    except Exception as e:
+                      print(f'select tee time had an error {e}')
                       break
-                except Exception as e:
-                  print(f'select tee time had an error {e}')
-                  break
-            else:
-                # If the element was not found, scroll the container
-                driver.execute_script("arguments[0].scrollTop += arguments[0].offsetHeight", scrollCont)
-                # Check if you've reached the bottom of the container
-                if driver.execute_script(f"return arguments[0].scrollTop", scrollCont) == scroll_height:
-                    break
+                else:
+                    # If the element was not found, scroll the container
+                    driver.execute_script("arguments[0].scrollTop += arguments[0].offsetHeight", scrollCont)
+                    # Check if you've reached the bottom of the container
+                    if driver.execute_script(f"return arguments[0].scrollTop", scrollCont) == scroll_height:
+                        break
     except Exception as e:
-        print(f'Unable to number of players {e}')
+        print(f'Unable to book number of players {e}')
         return False
 
     # GUEST INFO PAGE / SHOPPING CART
@@ -248,7 +269,7 @@ def make_a_reservation() -> bool:
             if testing_mode == True:
                 sleep(5)
                 print('Testing Mode Complete')
-                return False
+                return True
             else:
                 # Click confirm button
                 confirm_page_buttons[confirm_buttonIndex].click()
