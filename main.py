@@ -1,7 +1,7 @@
 import sys
 from typing import Tuple
 from time import sleep
-from datetime import time, datetime, timezone, timedelta
+from datetime import date, time, datetime, timezone, timedelta
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
@@ -15,25 +15,76 @@ from joblib import Parallel, delayed
 from selenium.webdriver.common.by import By
 import os
 from dotenv import load_dotenv
+import smtplib
+from email.message import EmailMessage
 
 load_dotenv()
+
+# Set up the email parameters
+EMAIL_ADDRESS = os.environ.get('EMAIL')
+EMAIL_PASSWORD = os.environ.get('EMAIL_PASSWORD')
+sender_email = EMAIL_ADDRESS
+recipient_email = EMAIL_ADDRESS
+
+# create the email message object
+msg = EmailMessage()
+msg['From'] = sender_email
+msg['To'] = recipient_email
+
+server = smtplib.SMTP('smtp.gmail.com', 587)
+server.ehlo()
+server.starttls()
+server.ehlo()
+server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+print('Logged into SMTP successfully')
 
 ############################################################################################
 # Be Sure to set all these params prior to running application                            #
 ############################################################################################
-begin_time = time(16,58) # When should it start reserving a tee time
+begin_time = time(4,58) # When should it start reserving a tee time
 end_time = time(22,7) # When should it stop trying to get a tee time
 max_try = 2 # change back to 500 when working
 course_number = int(7) # course No; cradle is 10
 is_current_month = True # False when reservation_day is for next month
 reservation_day = int(11) # day of current month to book
-book_first_avail = True # Book the first available tee time on this course
+book_first_avail = False # True books the first available tee time on this course
 desired_tee_time = '07:06 AM' # tee time in this format 'hh:mm AM'
-num_of_players = 2  # Only allows 1-2 players at the moment
-testing_mode = True # True will not book the round
+num_of_players = 1  # Only allows 1-2 players at the moment
+testing_mode = True # True will not book the round & will show browser window (not be headless)
+auto_select_date_based_on_course = False # True sets the days out for booking window based on course
 ############################################################################################
 
 est = timezone(timedelta(hours=-5), 'EST')
+
+course_number = int(sys.argv[1]) if len(sys.argv) >= 2 else course_number
+testing_mode = sys.argv[2] if len(sys.argv) >= 3 else testing_mode
+book_first_avail = sys.argv[3] if len(sys.argv) >= 4 else book_first_avail
+auto_select_date_based_on_course = sys.argv[4] if len(sys.argv) >= 5 else auto_select_date_based_on_course
+
+course_booking_days_out = {
+    1: 8,
+    2: 8,
+    3: 8,
+    4: 8,
+    5: 8,
+    6: 8,
+    7: 11,
+    8: 11,
+    9: 11,
+    10: 2,
+}
+
+# Defaults to 10, 7, 1 days out based on course
+if not testing_mode and auto_select_date_based_on_course:
+    begin_time = time(21,57)
+    end_time = time(22,7)
+    today = date.today()
+    days_out = course_booking_days_out[course_number]
+    future_date = today + timedelta(days=days_out)
+    reservation_day = future_date.day
+
+    if today.month != future_date.month:
+        is_current_month = False # TODO: figure out how to change to next month
 
 def check_current_time(begin_time:time, end_time:time) -> Tuple[time, bool]:
     '''
@@ -52,7 +103,7 @@ def make_a_reservation() -> bool:
     '''
     options = Options()
     # comment out this line to see the process in chrome
-    if testing_mode == False:
+    if not testing_mode:
         options.add_argument('--headless')
 
     driver = webdriver.Chrome(
@@ -256,6 +307,9 @@ def make_a_reservation() -> bool:
                 buttons[buttonIndex].click()
             else:
                 print(f'Proceed button not active. Could mean an overlapping tee time')
+                msg['Subject'] = 'Booking A Tee Time Issue'
+                msg.set_content(f'Unable to book a tee time. May be an overlapping tee time')
+                server.send_message(msg)
                 return False
         except Exception as e:
             print(f"Can't click proceed button. Breaking out of the loop. Error: {e}")
@@ -297,7 +351,7 @@ def make_a_reservation() -> bool:
         print(e)
         return False
     finally:
-	# close the drivers
+	      # close the drivers
         driver.quit()
 
 # login and check the time and click 'get slots' to keep page active
@@ -305,56 +359,72 @@ def try_booking() -> None:
     '''
     Try booking a reservation until either one reservation is made successfully or the attempt time reaches the max_try
     '''
-    
-    # initialize the params
-    current_time, is_during_running_time = check_current_time(begin_time, end_time)
-    reservation_completed = False
-    try_num = 1
-    bot_start_time=datetime.now()
-    bot_stop_time=datetime.now()
-    
-    # repeat booking a reservation every second
-    while True:
-      if not is_during_running_time:
-          print(f'Not Running the program. It is {current_time} and not between {begin_time} and {end_time}')
+    if not testing_mode:
+        msg['Subject'] = 'Booking A Tee Time Starting'
+        msg.set_content('Bot started running')
+        server.send_message(msg)
 
-          # sleep less as the time gets close to the begin_time
-          if current_time >= time(21,59,59):
-            sleep(0.001)
-          elif time(21,59,58) <= current_time < time(21,59,59):
-            sleep(0.5)
+    try:
+        # initialize the params
+        current_time, is_during_running_time = check_current_time(begin_time, end_time)
+        reservation_completed = False
+        try_num = 1
+        bot_start_time=datetime.now()
+        bot_stop_time=datetime.now()
+        
+        # repeat booking a reservation every second
+        while True:
+          if not is_during_running_time:
+              print(f'Not Running the program. It is {current_time} and not between {begin_time} and {end_time}')
+
+              # sleep less as the time gets close to the begin_time
+              if current_time >= time(21,59,59):
+                sleep(0.001)
+              elif time(21,59,58) <= current_time < time(21,59,59):
+                sleep(0.5)
+              else:
+                sleep(1)
+
+              try_num += 1
+              current_time, is_during_running_time = check_current_time(begin_time, end_time)
+              continue
+
+          print(f'----- try : {try_num} for {desired_tee_time} tee time on course No. {course_number} on day {reservation_day} -----')
+          print(f'The current time is {current_time}')
+          bot_start_time=datetime.now()
+          # try to get tee time
+          reservation_completed = make_a_reservation()
+
+          # If no errors
+          if reservation_completed:
+              current_time, is_during_running_time = check_current_time(begin_time, end_time)
+              bot_stop_time=datetime.now()
+              delta = bot_stop_time - bot_start_time
+              seconds = delta.total_seconds()
+              print(f'Got a tee time in {seconds} seconds')
+              break
+          # stop trying if max_try is reached
+          elif try_num >= max_try:
+              sleep(20)
+              print(f'Tried {try_num} times, but couldn\'t get the tee time...')
+              msg['Subject'] = 'Booking A Tee Time'
+              msg.set_content(f'Unable to book a tee time')
+              server.send_message(msg)
+              break
+          # if errors try again
           else:
-            sleep(1)
-
-          try_num += 1
-          current_time, is_during_running_time = check_current_time(begin_time, end_time)
-          continue
-
-      print(f'----- try : {try_num} for {desired_tee_time} tee time on course No. {course_number} -----')
-      print(f'The current time is {current_time}')
-      bot_start_time=datetime.now()
-      # try to get tee time
-      reservation_completed = make_a_reservation()
-
-      # If no errors
-      if reservation_completed:
-          current_time, is_during_running_time = check_current_time(begin_time, end_time)
-          bot_stop_time=datetime.now()
-          delta = bot_stop_time - bot_start_time
-          seconds = delta.total_seconds()
-          print(f'Got a tee time in {seconds} seconds')
-          break
-      # stop trying if max_try is reached
-      elif try_num >= max_try:
-          sleep(20)
-          print(f'Tried {try_num} times, but couldn\'t get the tee time...')
-          break
-      # if errors try again
-      else:
-          sleep(1)
-          try_num += 1
-          current_time, is_during_running_time = check_current_time(begin_time, end_time)
-
+              sleep(1)
+              try_num += 1
+              current_time, is_during_running_time = check_current_time(begin_time, end_time)
+    except Exception as e:
+        print(e)
+        msg['Subject'] = 'Booking A Tee Time'
+        msg.set_content(f'Unable to book a tee time. {e}')
+        server.send_message(msg)
+        return False
+    finally:
+	      # close the SMTP server
+        server.quit()
 
 if __name__ == '__main__':
     try_booking()

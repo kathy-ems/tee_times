@@ -20,7 +20,7 @@ Set all the params for creating a tee time in the top of `main.py` then run the 
 ```
 $ source ./.venv/bin/activate
 $ set -o allexport; source .env; set +o allexport
-$ python3 main.py
+$ python3 main.py [<courseNum>] [<testingBool>] [<firstAvailableBool>] [<autoselectdateBool>]
 ```
 
 
