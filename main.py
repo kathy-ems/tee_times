@@ -9,6 +9,8 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import ElementClickInterceptedException
 from joblib import Parallel, delayed
 from selenium.webdriver.common.by import By
 import os
@@ -19,23 +21,23 @@ load_dotenv()
 ############################################################################################
 # Be Sure to set all these params prior to running application                            #
 ############################################################################################
-begin_time = time(9,57) # When should it start reserving a tee time
+begin_time = time(16,58) # When should it start reserving a tee time
 end_time = time(22,7) # When should it stop trying to get a tee time
 max_try = 2 # change back to 500 when working
-course_number = int(1) # course No; cradle is 10
-desired_tee_time = '07:06 AM' # tee time in this format 'hh:mm AM'
-reservation_day = int(10) # day of current month to book
+course_number = int(7) # course No; cradle is 10
 is_current_month = True # False when reservation_day is for next month
-num_of_players = 2  # Only allows 1-2 players at the moment
+reservation_day = int(11) # day of current month to book
 book_first_avail = True # Book the first available tee time on this course
+desired_tee_time = '07:06 AM' # tee time in this format 'hh:mm AM'
+num_of_players = 2  # Only allows 1-2 players at the moment
 testing_mode = True # True will not book the round
 ############################################################################################
 
-est = timezone(timedelta(hours=-8), 'EST')
+est = timezone(timedelta(hours=-5), 'EST')
 
 def check_current_time(begin_time:time, end_time:time) -> Tuple[time, bool]:
     '''
-    Check current time is between 22:00 and 22:15. 
+    Check current time is between 22:00 and 22:07.
     Returns current time and if it is between begin and end time.
     '''
     dt_now = datetime.now(est)
@@ -147,7 +149,6 @@ def make_a_reservation() -> bool:
               if book_first_avail: 
                   try: 
                       chips = slot.find_elements(By.CLASS_NAME, "player-chip-detail")
-                      print(len(chips))
                       available_spots = 4-len(chips)
                       if available_spots >= num_of_players:
                           ## store slot index of desired slot number
@@ -240,11 +241,25 @@ def make_a_reservation() -> bool:
               if button.text == 'PROCEED':
                   buttonIndex = i
               break
-            except NoSuchElementException:
-              pass
+            except Exception as e:
+                print("Can't find proceed button")
+                return False
         else:
             print(f"The PROCEED button was not found")
-        buttons[buttonIndex].click()
+            return False
+        
+        try:
+            # Check if the button at buttonIndex is clickable
+            avlButtons = driver.find_elements(By.CSS_SELECTOR, 'button[mat-raised-button]:not(.mat-button-disabled)')
+            enabled_buttons = len(avlButtons)
+            if enabled_buttons > 1:
+                buttons[buttonIndex].click()
+            else:
+                print(f'Proceed button not active. Could mean an overlapping tee time')
+                return False
+        except Exception as e:
+            print(f"Can't click proceed button. Breaking out of the loop. Error: {e}")
+            return False
 
         # CONFIRMATION PAGE
         try: 
@@ -304,9 +319,9 @@ def try_booking() -> None:
           print(f'Not Running the program. It is {current_time} and not between {begin_time} and {end_time}')
 
           # sleep less as the time gets close to the begin_time
-          if current_time >= time(23,59,59):
+          if current_time >= time(21,59,59):
             sleep(0.001)
-          elif time(23,59,58) <= current_time < time(23,59,59):
+          elif time(21,59,58) <= current_time < time(21,59,59):
             sleep(0.5)
           else:
             sleep(1)
