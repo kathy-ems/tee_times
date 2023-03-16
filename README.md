@@ -13,6 +13,10 @@ $ poetry config virtualenvs.in-project true
 $ poetry install
 ```
 
+```
+$ chmod 777 run.sh
+```
+
 ## To Run Application
 Set all the params for creating a tee time in the top of `main.py` then run the below commands
 
