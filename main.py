@@ -395,11 +395,11 @@ def try_booking() -> None:
             print(f'Not Running the program. It is {current_time} and not between {begin_time} and {end_time}')
 
             # sleep less as the time gets close to the begin_time, 19:00 == 7pm pacific/10pm eastern
-            # if current_time >= time(18,59,59):
-            if current_time >= time(10,14,54):
+            if current_time >= time(18,59,54):
+            # if current_time >= time(10,14,54):
               sleep(0.001)
-            # elif time(18,59,58) <= current_time < time(18,59,59):
-            elif time(10,14,52) <= current_time < time(10,14,54):
+            elif time(18,59,53) <= current_time < time(18,59,54):
+            # elif time(10,14,52) <= current_time < time(10,14,54):
               sleep(0.5)
             else:
               sleep(1)
