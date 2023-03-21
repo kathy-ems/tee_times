@@ -47,7 +47,7 @@ end_time = time(19,7,0) # When should it stop trying to get a tee time
 max_try = 2 # change back to 500 when working
 is_current_month= True # False when reservation_day is for next month
 desired_tee_time = '08:27 AM' # tee time in this format 'hh:mm AM'
-course_number = int(6) # course No; cradle is 10
+course_number = int(3) # course No; cradle is 10
 book_first_avail = True # True books the first available tee time on this course
 num_of_players = int(2)  # Only allows 1-2 players at the moment
 is_testing_mode = True # True will not book the round & will show browser window (not be headless)
@@ -60,7 +60,6 @@ is_testing_mode = False if len(sys.argv) >= 3 and sys.argv[2] == 'False' else is
 book_first_avail = False if len(sys.argv) >= 4 and sys.argv[3] == 'False' else book_first_avail # bool
 auto_select_date_based_on_course = False if len(sys.argv) >= 5 and sys.argv[4] == 'False' else auto_select_date_based_on_course # bool
 num_of_players = int(sys.argv[5]) if len(sys.argv) >= 6 else num_of_players # int
-print(f'testing mode after {is_testing_mode}')
 
 bot_start_time = datetime.now()
 bot_stop_time = datetime.now()
@@ -162,8 +161,9 @@ def make_a_reservation() -> bool:
         date_inputs = driver.find_elements(By.TAG_NAME, "input")
         date_inputs[1].click()
     except Exception as e:
+        print('Allowing extra time for Tee Sheet with tee times to load')
         try:
-            sleep(2) # Common spot for page to take a long time loading; allowing extra time
+            sleep(1) # Common spot for page to take a long time loading; allowing extra time
             date_inputs = driver.find_elements(By.TAG_NAME, "input")
             date_inputs[1].click()
         except Exception as e:
@@ -263,15 +263,24 @@ def make_a_reservation() -> bool:
 
             ## Click BOOK in the target slot
             allAvlSlots[slotIndex].find_element(By.CLASS_NAME, "submit-button").click()
-            sleep(1)
+            sleep(.5) # Wait for players window to open
             # selects number of players
             guestPane = driver.find_element(By.CLASS_NAME, "guest-container")
             num_players = guestPane.find_elements(By.TAG_NAME, "li")
             num_players[num_of_players-1].click()
             return None
           except Exception as e:
-            print(f'select players had an error: {e}')
-            return False
+            print('Waiting extra time for players to load')
+            try:
+              sleep(.5) # Wait for players window to open
+              # selects number of players
+              guestPane = driver.find_element(By.CLASS_NAME, "guest-container")
+              num_players = guestPane.find_elements(By.TAG_NAME, "li")
+              num_players[num_of_players-1].click()
+              return None
+            except Exception as e:
+              print(f'select players had an error: {e}')
+              return False
 
         # BOOK FIRST AVAIALABLE OR BOOK BY TEE TIME
         if book_first_avail:
@@ -281,9 +290,7 @@ def make_a_reservation() -> bool:
                 for element in driver.find_elements(By.XPATH, f"//*[contains(text(), 'BOOK')]"):
                     try:
                       if element.is_displayed():
-                          print(f"Found a slot to check to Book")
                           selectedSlot = select_slot_by_first_available(driver)
-                          print(selectedSlot)
                           if selectedSlot == True:
                             break
                     except Exception as e:
@@ -322,10 +329,7 @@ def make_a_reservation() -> bool:
 
     # GUEST INFO PAGE / SHOPPING CART
     try:
-        if try_num > 1:
-            sleep(2) # Common spot for page to take a long time loading
-        else:
-            sleep(1.5) ## Wait to let page load
+        sleep(1) ## Wait to let page load
         wait = WebDriverWait(driver, 10)
         element = wait.until(EC.presence_of_element_located((By.CLASS_NAME, "loader-hidden")))
         # Choose extra players
@@ -337,8 +341,22 @@ def make_a_reservation() -> bool:
             elements = guestInfoCont.find_elements(By.CLASS_NAME, "mat-icon.mat-icon")
             elements[1].click()
     except Exception as e:
-        print(f'Unable to {num_of_players} of players {e}')
-        return False
+        print('Allowing extra time for Guest Info Shopping Cart to load')
+        try:
+            sleep(2) # Common spot for page to take a long time loading
+            wait = WebDriverWait(driver, 10)
+            element = wait.until(EC.presence_of_element_located((By.CLASS_NAME, "loader-hidden")))
+            # Choose extra players
+            if num_of_players == 2:
+                root_element = driver.find_element(By.TAG_NAME, "app-root")
+                inner_div_element = root_element.find_element(By.TAG_NAME, "div")
+                innermost_div_element = inner_div_element.find_element(By.TAG_NAME, "div")
+                guestInfoCont = innermost_div_element.find_element(By.CLASS_NAME, "guest-info-container")
+                elements = guestInfoCont.find_elements(By.CLASS_NAME, "mat-icon.mat-icon")
+                elements[1].click()
+        except Exception as e:
+          print(f'Unable to {num_of_players} of players {e}')
+          return False
 
     try:
         sleep(.5) ## Wait to let page load
@@ -406,11 +424,12 @@ def make_a_reservation() -> bool:
                 confirm_page_buttons[confirm_buttonIndex].click()
                 sleep(5) ## Wait to let page load - required to finalize booking
         except Exception as e:
+            sleep(5) ## Wait a little longer to let the page load
             print(f'Unable to confirm {e}')
             return False   
         return True
     except Exception as e:
-        print(e)
+        print(f'Issue with proceed and confirm: {e}')
         return False
     finally:
 	      # close the drivers
@@ -432,7 +451,7 @@ def try_booking() -> None:
       msg.set_content(f'Tee time bot started running, {current_time}')
       server.send_message(msg)
     else:
-      print('** TESTING MODE ON **')
+      print('*********** TESTING MODE ON **************')
 
     try:
       # repeat booking a reservation every second
@@ -440,7 +459,7 @@ def try_booking() -> None:
         if not is_during_running_time:
             print(f'Not Running the program. It is {current_time} and not between {begin_time} and {end_time}')
 
-            # sleep less as the time gets close to the begin_time, 19:00 == 7pm pacific/10pm eastern
+            # sleep less as the time gets close to the begin_time, 19:00 (7pm pacific/10pm eastern)
             if current_time >= time(18,59,55):
             # if current_time >= time(10,14,54):
               sleep(0.001)
@@ -457,7 +476,7 @@ def try_booking() -> None:
           tee_time = 'first available'
         else:
           tee_time = desired_tee_time
-        print(f'----- try : {try_num} for {tee_time} tee time on course No. {course_number} on {reservation_day} for {num_of_players} players -----')
+        print(f'----- try : {try_num} for {tee_time} tee time on course No. {course_number} on day {reservation_day} for {num_of_players} players -----')
         print(f'The current time is {current_time}')
         # try to get tee time
         reservation_completed = make_a_reservation()
@@ -473,19 +492,22 @@ def try_booking() -> None:
               msg.set_content(f'Got a tee time in {seconds} seconds for {tee_time_info}')
               server.send_message(msg)
             else: 
-              print(f'Got a tee time in {seconds} seconds for {tee_time_info}')
+              print(f'----- Got a tee time in {seconds} seconds for {tee_time_info} -----')
             break
         # stop trying if max_try is reached
         elif try_num >= max_try:
+            current_time, is_during_running_time = check_current_time()
             sleep(10)
             print(f'Tried {try_num} times, but couldn\'t get the tee time...')
-            msg['Subject'] = 'Booking A Tee Time'
-            msg.set_content(f'Unable to book a tee time. Bot stopped at {current_time}')
-            server.send_message(msg)
+            if is_testing_mode == False:
+              msg['Subject'] = 'Unable to Book A Tee Time'
+              msg.set_content(f'Unable to book a tee time. Bot stopped at {current_time}')
+              server.send_message(msg)
+            else:
+              print(f'Unable to book a tee time. Bot stopped at {current_time}')
             break
         # if errors try again
         else:
-            sleep(1)
             try_num += 1
             current_time, is_during_running_time = check_current_time()
     except Exception as e:
