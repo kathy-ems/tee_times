@@ -41,27 +41,29 @@ print('Logged into SMTP successfully')
 ############################################################################################
 # Be Sure to set all these params prior to running application                            #
 ############################################################################################
-# begin_time = time(10,0) # When should it start reserving a tee time
-begin_time = time(10,14,55) # When should it start reserving a tee time
-end_time = time(22,7) # When should it stop trying to get a tee time
+begin_time = time(2,0) # When should it start reserving a tee time
+# begin_time = time(18,59,55) # When should it start reserving a tee time
+end_time = time(19,7,0) # When should it stop trying to get a tee time
 max_try = 2 # change back to 500 when working
-course_number = int(6) # course No; cradle is 10
-is_current_month = True # False when reservation_day is for next month
-reservation_day = int(21) # day of current month to book
-book_first_avail = False # True books the first available tee time on this course
+is_current_month= True # False when reservation_day is for next month
 desired_tee_time = '08:27 AM' # tee time in this format 'hh:mm AM'
+course_number = int(6) # course No; cradle is 10
+book_first_avail = True # True books the first available tee time on this course
 num_of_players = int(2)  # Only allows 1-2 players at the moment
-testing_mode = True # True will not book the round & will show browser window (not be headless)
+is_testing_mode = True # True will not book the round & will show browser window (not be headless)
+reservation_day = int(28) # day of current month to book
 auto_select_date_based_on_course = False # True sets the days out for booking window based on course
 ############################################################################################
 
-# est = timezone(timedelta(hours=-5), 'EST')
+course_number = int(sys.argv[1]) if len(sys.argv) >= 2 else course_number # int
+is_testing_mode = False if len(sys.argv) >= 3 and sys.argv[2] == 'False' else is_testing_mode # bool
+book_first_avail = False if len(sys.argv) >= 4 and sys.argv[3] == 'False' else book_first_avail # bool
+auto_select_date_based_on_course = False if len(sys.argv) >= 5 and sys.argv[4] == 'False' else auto_select_date_based_on_course # bool
+num_of_players = int(sys.argv[5]) if len(sys.argv) >= 6 else num_of_players # int
+print(f'testing mode after {is_testing_mode}')
 
-course_number = int(sys.argv[1]) if len(sys.argv) >= 2 else course_number
-testing_mode = sys.argv[2] if len(sys.argv) >= 3 else testing_mode
-book_first_avail = sys.argv[3] if len(sys.argv) >= 4 else book_first_avail
-auto_select_date_based_on_course = sys.argv[4] if len(sys.argv) >= 5 else auto_select_date_based_on_course
-num_of_players = sys.argv[5] if len(sys.argv) >= 6 else num_of_players
+bot_start_time = datetime.now()
+bot_stop_time = datetime.now()
 
 course_booking_days_out = {
     1: 8,
@@ -76,22 +78,21 @@ course_booking_days_out = {
     10: 2,
 }
 
+if is_testing_mode == False:
+  begin_time = time(18,59,55)
+  end_time = time(19,7)
+
 # Defaults to 10, 7, 1 days out based on course
-if not testing_mode and auto_select_date_based_on_course:
-    begin_time = time(18,59,55)
-    end_time = time(19,7)
-    today = date.today()
-    days_out = course_booking_days_out[course_number]
-    future_date = today + timedelta(days=days_out)
-    reservation_day = future_date.day
+if auto_select_date_based_on_course:
+  today = date.today()
+  days_out = course_booking_days_out[course_number]
+  future_date = today + timedelta(days=days_out)
+  reservation_day = future_date.day
 
-    if today.month != future_date.month:
-        is_current_month = False # TODO: figure out how to change to next month
+  if today.month != future_date.month:
+      is_current_month = False # TODO: figure out how to change to next month
 
-bot_start_time=datetime.now()
-bot_stop_time=datetime.now()
-
-def check_current_time(begin_time:time, end_time:time) -> Tuple[time, bool]:
+def check_current_time() -> Tuple[time, bool]:
     '''
     Check current time is between 22:00 and 22:07.
     Returns current time and if it is between begin and end time.
@@ -111,7 +112,7 @@ def make_a_reservation() -> bool:
     bot_start_time=starting_bot
     options = Options()
     # comment out this line to see the process in chrome
-    if not testing_mode:
+    if is_testing_mode == False:
         options.add_argument('--headless')
 
     driver = webdriver.Chrome(
@@ -156,17 +157,18 @@ def make_a_reservation() -> bool:
       
     # TEE SHEET WITH TEE TIMES
     try:
-        if try_num > 1:
-            sleep(2) # Common spot for page to take a long time loading
-        else:
-            sleep(1.25) ## Wait to let page load
-    
+        sleep(1) ## Wait to let page load
         # Open end tee time calendar
         date_inputs = driver.find_elements(By.TAG_NAME, "input")
         date_inputs[1].click()
     except Exception as e:
-        print(f'Unable to select 1st end date: {e}')
-        return False
+        try:
+            sleep(2) # Common spot for page to take a long time loading; allowing extra time
+            date_inputs = driver.find_elements(By.TAG_NAME, "input")
+            date_inputs[1].click()
+        except Exception as e:
+            print(f'Unable to select 1st end date: {e}')
+            return False
       
     try:
         # select end date in date picker
@@ -183,15 +185,20 @@ def make_a_reservation() -> bool:
         # select start date in date picker
         td_days = driver.find_elements(By.TAG_NAME, "td")
         td_days[reservation_day].click()
-        # Check how long it takes to get to "Get Slots" button 
-        bot_stop_time=datetime.now()
-        delta = bot_stop_time - bot_start_time
-        seconds = delta.total_seconds()
-        print(f'At GET SLOTS in {seconds} seconds')
+    except Exception as e:
+        print(f'Unable to select start date in picker: {e}')
+        return False
+    try:
+        if is_testing_mode == True:
+          # Check how long it takes to get to "Get Slots" button
+          bot_stop_time=datetime.now()
+          delta = bot_stop_time - bot_start_time
+          seconds = delta.total_seconds()
+          print(f'At GET SLOTS in {seconds} seconds')
         # get slots
         driver.find_element(By.CLASS_NAME, "submit-button").click()
     except Exception as e:
-        print(f'Unable to select start date: {e}')
+        print(f'Unable to click get slots: {e}')
         return False
 
     # SELECT PLAYERS IN TEE SHEET & CLICK BOOK
@@ -205,38 +212,52 @@ def make_a_reservation() -> bool:
         # Get the height of the scroll container
         scroll_height = driver.execute_script("return arguments[0].scrollHeight", scrollCont)
         
-        # SELECT BY TEE TIME
-        def select_num_players(driver, desired_tee_time, num_of_players) -> None:
+        def select_slot_by_first_available(driver) -> bool:
           try:
-            slotIndex = int(1)
+            slotIndex = int(0)
             ## obtain all open slots and find desired slot
             allAvlSlots = driver.find_elements(By.CLASS_NAME, "available-slot:not(.booked-slot)")
             for i, slot in enumerate(allAvlSlots):
               # GET BY FIRST AVIALABLE
-              if book_first_avail: 
-                  try: 
-                      chips = slot.find_elements(By.CLASS_NAME, "player-chip-detail")
-                      available_spots = 4-len(chips)
-                      if available_spots >= num_of_players:
-                          ## store slot index of desired slot number
-                          slotIndex = i
-                          print(f"The first available tee time was found at index {i}")
-                          break
-                  except Exception as e:
-                      print(f'First available tee time error {e}')
-                      return False
+              try:
+                  chips = slot.find_elements(By.CLASS_NAME, "player-chip-detail")
+                  available_spots = 4-len(chips)
+                  if available_spots >= num_of_players:
+                       ## Click BOOK in the target slot
+                      slot.find_element(By.CLASS_NAME, "submit-button").click()
+                      sleep(1)
+                      # selects number of players
+                      guestPane = driver.find_element(By.CLASS_NAME, "guest-container")
+                      num_players = guestPane.find_elements(By.TAG_NAME, "li")
+                      num_players[num_of_players-1].click()
+                      return True
+              except Exception as e:
+                  print(f'Select players had an error: {e}')
+                  return False
+            else:
+              return False
+          except Exception as e:
+            print(f'Checking first available tee time error {e}')
+            return False
+
+        # SELECT BY TEE TIME
+        def select_slot_by_tee_time(driver) -> None:
+          try:
+            slotIndex = int(0)
+            ## obtain all open slots and find desired slot
+            allAvlSlots = driver.find_elements(By.CLASS_NAME, "available-slot:not(.booked-slot)")
+            for i, slot in enumerate(allAvlSlots):
               # GET BY TEE TIME
-              else:
-                  try:
-                      div = slot.find_element(By.CLASS_NAME, "schedule-time")
-                      if div.text == desired_tee_time:
-                          ## store slot index of desired slot number
-                          slotIndex = i
-                          print(f"The tee time {div.text} was found at index {i}")
-                          break
-                  except Exception as e:
-                      print(f'First available tee time error {e}')
-                      return False
+              try:
+                  div = slot.find_element(By.CLASS_NAME, "schedule-time")
+                  if div.text == desired_tee_time:
+                      ## store slot index of desired slot number
+                      slotIndex = i
+                      print(f"The tee time {div.text} was found at index {i}")
+                      break
+              except Exception as e:
+                  print(f'First available tee time error {e}')
+                  return False
             else:
                 print(f"The available tee time was not found")
 
@@ -249,12 +270,32 @@ def make_a_reservation() -> bool:
             num_players[num_of_players-1].click()
             return None
           except Exception as e:
-            print(f'select players had an error {e}')
+            print(f'select players had an error: {e}')
             return False
 
         # BOOK FIRST AVAIALABLE OR BOOK BY TEE TIME
         if book_first_avail:
-            select_num_players(driver, None, num_of_players)
+            selectedSlot = False
+            # Scroll through the container until the desired tee time is found or until you've reached the bottom
+            while not selectedSlot:
+                for element in driver.find_elements(By.XPATH, f"//*[contains(text(), 'BOOK')]"):
+                    try:
+                      if element.is_displayed():
+                          print(f"Found a slot to check to Book")
+                          selectedSlot = select_slot_by_first_available(driver)
+                          print(selectedSlot)
+                          if selectedSlot == True:
+                            break
+                    except Exception as e:
+                      print(f'select tee time had an error {e}')
+                      break
+                else:
+                    print('scrolling')
+                    # If the element was not found, scroll the container
+                    driver.execute_script("arguments[0].scrollTop += arguments[0].offsetHeight", scrollCont)
+                    # Check if you've reached the bottom of the container
+                    if driver.execute_script(f"return arguments[0].scrollTop", scrollCont) == scroll_height:
+                        break
         else: 
             selectedPlayer = False
             # Scroll through the container until the desired tee time is found or until you've reached the bottom
@@ -263,7 +304,7 @@ def make_a_reservation() -> bool:
                     try:
                       if element.is_displayed():
                           print(f"Found the desired text: {element.text}")
-                          select_num_players(driver, desired_tee_time, num_of_players)
+                          select_slot_by_tee_time(driver)
                           selectedPlayer = True
                           break
                     except Exception as e:
@@ -281,7 +322,10 @@ def make_a_reservation() -> bool:
 
     # GUEST INFO PAGE / SHOPPING CART
     try:
-        sleep(1.5) ## Wait to let page load
+        if try_num > 1:
+            sleep(2) # Common spot for page to take a long time loading
+        else:
+            sleep(1.5) ## Wait to let page load
         wait = WebDriverWait(driver, 10)
         element = wait.until(EC.presence_of_element_located((By.CLASS_NAME, "loader-hidden")))
         # Choose extra players
@@ -353,14 +397,14 @@ def make_a_reservation() -> bool:
                 print(f"The CONFIRM button was not found")
 
             # Test mode will not click confirm
-            if testing_mode == True:
+            if is_testing_mode == True:
                 sleep(6)
                 print('Testing Mode Complete')
                 return True
             else:
                 # Click confirm button
                 confirm_page_buttons[confirm_buttonIndex].click()
-                sleep(4) ## Wait to let page load - required to finalize booking
+                sleep(5) ## Wait to let page load - required to finalize booking
         except Exception as e:
             print(f'Unable to confirm {e}')
             return False   
@@ -379,14 +423,16 @@ def try_booking() -> None:
     Try booking a reservation until either one reservation is made successfully or the attempt time reaches the max_try
     '''
     # initialize the params
-    current_time, is_during_running_time = check_current_time(begin_time, end_time)
+    current_time, is_during_running_time = check_current_time()
     reservation_completed = False
     try_num = 1
     
-    if not testing_mode:
-        msg['Subject'] = 'Booking A Tee Time Starting'
-        msg.set_content(f'Tee time bot started running, {current_time}')
-        server.send_message(msg)
+    if is_testing_mode == False:
+      msg['Subject'] = 'Booking A Tee Time Starting'
+      msg.set_content(f'Tee time bot started running, {current_time}')
+      server.send_message(msg)
+    else:
+      print('** TESTING MODE ON **')
 
     try:
       # repeat booking a reservation every second
@@ -395,7 +441,7 @@ def try_booking() -> None:
             print(f'Not Running the program. It is {current_time} and not between {begin_time} and {end_time}')
 
             # sleep less as the time gets close to the begin_time, 19:00 == 7pm pacific/10pm eastern
-            if current_time >= time(18,59,54):
+            if current_time >= time(18,59,55):
             # if current_time >= time(10,14,54):
               sleep(0.001)
             elif time(18,59,53) <= current_time < time(18,59,54):
@@ -404,21 +450,25 @@ def try_booking() -> None:
             else:
               sleep(1)
 
-            current_time, is_during_running_time = check_current_time(begin_time, end_time)
+            current_time, is_during_running_time = check_current_time()
             continue
 
-        print(f'----- try : {try_num} for {desired_tee_time} tee time on course No. {course_number} on day {reservation_day} -----')
+        if book_first_avail:
+          tee_time = 'first available'
+        else:
+          tee_time = desired_tee_time
+        print(f'----- try : {try_num} for {tee_time} tee time on course No. {course_number} on {reservation_day} for {num_of_players} players -----')
         print(f'The current time is {current_time}')
         # try to get tee time
         reservation_completed = make_a_reservation()
 
         # If no errors
         if reservation_completed:
-            current_time, is_during_running_time = check_current_time(begin_time, end_time)
+            current_time, is_during_running_time = check_current_time()
             bot_stop_time=datetime.now()
             delta = bot_stop_time - bot_start_time
             seconds = delta.total_seconds()
-            if not testing_mode:
+            if is_testing_mode == False:
               msg['Subject'] = (f'Booked A Tee Time: {tee_time_info}')
               msg.set_content(f'Got a tee time in {seconds} seconds for {tee_time_info}')
               server.send_message(msg)
@@ -437,9 +487,9 @@ def try_booking() -> None:
         else:
             sleep(1)
             try_num += 1
-            current_time, is_during_running_time = check_current_time(begin_time, end_time)
+            current_time, is_during_running_time = check_current_time()
     except Exception as e:
-        print(e)
+        print(f'Unable to book a tee time: {e}')
         msg['Subject'] = 'Booking A Tee Time'
         msg.set_content(f'Unable to book a tee time. {e}')
         server.send_message(msg)
