@@ -48,12 +48,12 @@ end_time = time(19,7,0) # When should it stop trying to get a tee time
 max_try = 2 # change back to 500 when working
 is_current_month= True # False when reservation_day is for next month
 desired_tee_time = '08:27 AM' # tee time in this format 'hh:mm AM'
-course_number = int(3) # course No; cradle is 10
+course_number = int(7) # course No; cradle is 10
 book_first_avail = True # True books the first available tee time on this course
 num_of_players = int(2)  # Only allows 1-2 players at the moment
 is_testing_mode = True # True will not book the round & will show browser window (not be headless)
 reservation_day = int(29) # day of current month to book
-auto_select_date_based_on_course = False # True sets the days out for booking window based on course
+auto_select_date_based_on_course = True # True sets the days out for booking window based on course
 ############################################################################################
 
 if len(sys.argv) >= 2: # Only run the below if there are args
@@ -91,7 +91,7 @@ if auto_select_date_based_on_course:
   reservation_day = future_date.day
 
   if today.month != future_date.month:
-      is_current_month = False # TODO: figure out how to change to next month
+      is_current_month = False
 
 def elapsed_time(message) -> None:
     bot_stop_time=datetime.now()
@@ -177,25 +177,57 @@ def make_a_reservation() -> bool:
         except Exception as e:
             print(f'Unable to select 1st end date: {e}')
             return False
-      
+    # change end date to next month
+    if is_current_month == False:
+      try:
+        next_month = driver.find_element(By.CSS_SELECTOR, "button.mat-calendar-next-button")
+        next_month.click()
+      except Exception as e:
+        print('Unable to select next month for end date', e)
     try:
         # select end date in date picker
         td_days = driver.find_elements(By.TAG_NAME, "td")
         td_days[reservation_day].click()
     except Exception as e:
-        print(f'Unable to select 2nd end date: {e}')
-        return False
-      
+        try:
+          print('Allowing extra time for 2nd end date picker')
+          sleep(1) # Allow extra time if needed
+          # select end date in date picker
+          td_days = driver.find_elements(By.TAG_NAME, "td")
+          td_days[reservation_day].click()
+        except Exception as e:
+          print(f'Unable to select 2nd end date: {e}')
+          return False
     try:
         # Open start tee time Calendar
         date_inputs = driver.find_elements(By.TAG_NAME, "input")
         date_inputs[0].click()
+    except Exception as e:
+        print('Unable to open start time calendar', e)
+    # change start date to next month
+    if is_current_month == False:
+      try:
+        next_month = driver.find_element(By.CSS_SELECTOR, "button.mat-calendar-next-button")
+        next_month.click()
+      except Exception as e:
+        print('Unable to select next month for end date', e)
+    try:
         # select start date in date picker
         td_days = driver.find_elements(By.TAG_NAME, "td")
         td_days[reservation_day].click()
     except Exception as e:
-        print(f'Unable to select start date in picker: {e}')
-        return False
+        try:
+          print('Allowing extra time for start tee time picker')
+          sleep(1) # allow extra time if needed
+          # Open start tee time Calendar
+          date_inputs = driver.find_elements(By.TAG_NAME, "input")
+          date_inputs[0].click()
+          # select start date in date picker
+          td_days = driver.find_elements(By.TAG_NAME, "td")
+          td_days[reservation_day].click()
+        except Exception as e:
+          print(f'Unable to select start date in picker: {e}')
+          return False
     try:
         if is_testing_mode == True:
           # Check how long it takes to get to "Get Slots" button
@@ -331,6 +363,11 @@ def make_a_reservation() -> bool:
                     if driver.execute_script(f"return arguments[0].scrollTop", scrollCont) == scroll_height:
                         break
     except Exception as e:
+        if is_testing_mode == False:
+            del msg['subject']
+            msg['Subject'] = 'Booking A Tee Time Issue'
+            msg.set_content(f'Unable to book a tee time. No available tee times on {course_number}')
+            server.send_message(msg)
         print(f'Unable to book number of players {e}')
         return False
 
@@ -398,7 +435,7 @@ def make_a_reservation() -> bool:
                 print(f'Proceed button not active. Could mean an overlapping tee time')
                 del msg['subject']
                 msg['Subject'] = 'Booking A Tee Time Issue'
-                msg.set_content(f'Unable to book a tee time. May be an overlapping tee time')
+                msg.set_content(f'Unable to book a tee time. May be an overlapping tee time on {course_number}')
                 server.send_message(msg)
                 return False
         except Exception as e:
@@ -461,7 +498,7 @@ def try_booking() -> None:
     if is_testing_mode == False:
       del msg['subject']
       msg['Subject'] = 'Booking A Tee Time'
-      msg.set_content(f'Tee time bot checking current time starting at {current_time}')
+      msg.set_content(f'Tee time bot checking current time starting at {current_time} on {course_number}')
       server.send_message(msg)
     else:
       print('*********** TESTING MODE ON **************')
@@ -513,7 +550,7 @@ def try_booking() -> None:
             if is_testing_mode == False:
               del msg['subject']
               msg['Subject'] = 'Unable to Book A Tee Time'
-              msg.set_content(f'Unable to book a tee time. Bot stopped at {current_time}')
+              msg.set_content(f'Unable to book a tee time on {course_number}. Bot stopped at {current_time}')
               server.send_message(msg)
             else:
               print(f'Unable to book a tee time. Bot stopped at {current_time}')
@@ -526,7 +563,7 @@ def try_booking() -> None:
         print(f'Unable to book a tee time: {e}')
         del msg['subject']
         msg['Subject'] = 'Unable to Book A Tee Time'
-        msg.set_content(f'Unable to book a tee time. {e}')
+        msg.set_content(f'Unable to book a tee time on {course_number}. {e}')
         server.send_message(msg)
         return False
     finally:
