@@ -340,8 +340,14 @@ def make_a_reservation() -> bool:
                     # If the element was not found, scroll the container
                     driver.execute_script("arguments[0].scrollTop += arguments[0].offsetHeight", scrollCont)
                     # Check if you've reached the bottom of the container
-                    if driver.execute_script(f"return arguments[0].scrollTop", scrollCont) == scroll_height or scrollTimes >=  10:
+                    if driver.execute_script(f"return arguments[0].scrollTop", scrollCont) == scroll_height or scrollTimes >=  20:
+                        if is_testing_mode == False:
+                            del msg['subject']
+                            msg['Subject'] = 'Booking A Tee Time Issue'
+                            msg.set_content(f'Unable to book a tee time. No available tee times on {course_number}')
+                            server.send_message(msg)
                         break
+                        return False
         else: 
             selectedPlayer = False
             # Scroll through the container until the desired tee time is found or until you've reached the bottom
@@ -363,11 +369,6 @@ def make_a_reservation() -> bool:
                     if driver.execute_script(f"return arguments[0].scrollTop", scrollCont) == scroll_height:
                         break
     except Exception as e:
-        if is_testing_mode == False:
-            del msg['subject']
-            msg['Subject'] = 'Booking A Tee Time Issue'
-            msg.set_content(f'Unable to book a tee time. No available tee times on {course_number}')
-            server.send_message(msg)
         print(f'Unable to book number of players {e}')
         return False
 
@@ -399,7 +400,7 @@ def make_a_reservation() -> bool:
                 elements = guestInfoCont.find_elements(By.CLASS_NAME, "mat-icon.mat-icon")
                 elements[1].click()
         except Exception as e:
-          print(f'Unable to {num_of_players} of players {e}')
+          print(f'Unable to select {num_of_players} of players {e}')
           return False
 
     try:
