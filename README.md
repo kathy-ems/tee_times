@@ -20,14 +20,14 @@ Run it with python (not poetry)
 ```
 $ source ./.venv/bin/activate
 $ set -o allexport; source .env; set +o allexport
-$ python3 main.py [<courseNum>] [<testingBool>] [<firstAvailableBool>] [<autoselectdateBool>] [<numOfPlayers>]
+$ python3 main.py [<courseNum>] [<testingBool>] [<firstAvailableBool>] [<autoselectdateBool>] [<numOfPlayers>] [<randomSignatureCourseBool>]
 ```
 
 Run it with Poetry
 
 ```
 $ set -o allexport; source .env; set +o allexport
-$ poetry run python3 main.py [<courseNum>] [<testingBool>] [<firstAvailableBool>] [<autoselectdateBool>] [<numOfPlayers>]
+$ poetry run python3 main.py [<courseNum>] [<testingBool>] [<firstAvailableBool>] [<autoselectdateBool>] [<numOfPlayers>] [<randomSignatureCourseBool>]
 ```
 
 
