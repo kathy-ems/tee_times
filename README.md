@@ -5,6 +5,7 @@
 Install python 3.9
 
 ```
+$ python3.9 -m venv .venv
 $ poetry install
 ```
 
@@ -27,7 +28,7 @@ Run it with Poetry
 
 ```
 $ set -o allexport; source .env; set +o allexport
-$ poetry run python3 main.py [<courseNum>] [<testingBool>] [<firstAvailableBool>] [<autoselectdateBool>] [<numOfPlayers>] [<randomSignatureCourseBool>]
+$ poetry run python3 main.py [<courseNum>] [<testingBool>] [<firstAvailableBool>] [<autoselectdateBool>] [<numOfPlayers>] [<randomSignatureCourseBool>] [<afternoon_round>]
 ```
 
 
@@ -43,6 +44,10 @@ Try to get out of virtual env (use poetry instead)
 $ deactivate
 ```
 
+If Poetry is not correct version 1.4.2
+```
+$ poetry -V
+$ export PATH="/Users/kathyle/.local/bin:$PATH"
 ```
 $ source ./.venv/bin/activate
 $ pip3 uninstall selenium
