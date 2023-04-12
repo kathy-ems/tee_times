@@ -21,7 +21,7 @@ Run it with python (not poetry)
 ```
 $ source ./.venv/bin/activate
 $ set -o allexport; source .env; set +o allexport
-$ python3 main.py [<courseNum>] [<testingBool>] [<firstAvailableBool>] [<autoselectdateBool>] [<numOfPlayers>] [<randomSignatureCourseBool>]
+$ python3 main.py [<courseNum>] [<testingBool>] [<firstAvailableBool>] [<autoselectdateBool>] [<numOfPlayers>] [<randomSignatureCourseBool>] [<afternoon_round>]
 ```
 
 Run it with Poetry

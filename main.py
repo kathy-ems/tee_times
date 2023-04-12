@@ -49,14 +49,14 @@ end_time = time(19,7,0) # When should it stop trying to get a tee time
 max_try = 2 # change back to 500 when working
 is_current_month = True # False when reservation_day is for next month
 desired_tee_time = '08:27 AM' # tee time in this format 'hh:mm AM'
-course_number = int(7) # course No; cradle is 10
+course_number = int(9) # course No; cradle is 10
 book_first_avail = True # True books the first available tee time on this course
 num_of_players = int(2)  # Only allows 1-2 players at the moment
 is_testing_mode = True # True will not book the round & will show browser window (not be headless)
-reservation_day = int(8) # day of current month to book
+reservation_day = int(22) # day of current month to book
 auto_select_date_based_on_course = False # True sets the days out for booking window based on course
 random_signature_course = False # True randomly chooses course No 7-9
-afternoon_round = False # True picks tee time automatically in the afternoon for No 2, No 4
+afternoon_round = True # True picks tee time automatically in the afternoon for No 2, No 4
 ############################################################################################
 
 if len(sys.argv) >= 2: # Only run the below if there are args
@@ -72,7 +72,7 @@ if random_signature_course == True and course_number in [7, 8, 9]:
     # course_number = randint(7, 9)
     max_try = 3
 if afternoon_round == True:
-    desired_tee_time = '02:'
+    desired_tee_time = '03:'
 
 bot_start_time = datetime.now()
 bot_stop_time = datetime.now()
@@ -193,23 +193,25 @@ def select_afternoon_tee_time(driver) -> None:
   try:
     ## obtain all open slots and find desired slot
     allAvlSlots = driver.find_elements(By.CLASS_NAME, "available-slot:not(.booked-slot)")
-    for slot in reversed(allAvlSlots):
-        try:
-            chips = slot.find_elements(By.CLASS_NAME, "player-chip-detail")
-            available_spots = 4-len(chips)
-            if available_spots >= num_of_players:
-                # Click BOOK in the target slot
-                slot.find_element(By.CLASS_NAME, "submit-button").click()
-                sleep(1)
-                # selects number of players from drop down
-                guestPane = driver.find_element(By.CLASS_NAME, "guest-container")
-                player_options = guestPane.find_elements(By.TAG_NAME, "li")
-                player_options[num_of_players-1].click()
-                return True
-        except Exception as e:
-            print(f'Select players had an error: {e}')
-            return False
+    for slot in allAvlSlots:
+        div = slot.find_element(By.CLASS_NAME, "schedule-time")
+        if desired_tee_time in div.text:
+            try:
+                chips = slot.find_elements(By.CLASS_NAME, "player-chip-detail")
+                available_spots = 4-len(chips)
+                if available_spots >= num_of_players:
+                    # Click BOOK in the target slot
+                    slot.find_element(By.CLASS_NAME, "submit-button").click()
+                    # selects number of players from drop down
+                    guestPane = driver.find_element(By.CLASS_NAME, "guest-container")
+                    player_options = guestPane.find_elements(By.TAG_NAME, "li")
+                    player_options[num_of_players-1].click()
+                    return True
+            except Exception as e:
+                print(f'Select players had an error: {e}')
+                return False
     else:
+        print(f'No tee times found with {desired_tee_time}')
         return False
 
     sleep(.5) # Wait for players window to open
@@ -366,7 +368,7 @@ def make_a_reservation() -> bool:
         # get slots
         time_to_click_slots = False
         # only click Get Slots when it's 19:00
-        while time_to_click_slots == False:
+        while time_to_click_slots == False and is_testing_mode == False:
           current_time, is_during_running_time = check_current_time()
           time_to_click_slots = (time(19,0,0) <= current_time) and (current_time < end_time)
           # time_to_click_slots = (time(15,21,0) <= current_time) and (current_time < time(15,40,55))
