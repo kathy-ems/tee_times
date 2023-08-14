@@ -43,13 +43,13 @@ print("Logged into SMTP successfully")
 
 def logError(message) -> None:
     global errorMessage
-    errorMressage += message
+    errorMressage = f"{errorMessage}; {message}"
     return errorMessage
 
 
-def sendErrorMessage(message) -> None:
+def sendEmailMessage(subject, message) -> None:
     del msg["subject"]
-    msg["Subject"] = "Error while booking a tee time"
+    msg["Subject"] = subject
     msg.set_content(message)
     server.send_message(msg)
 
@@ -100,7 +100,7 @@ if len(sys.argv) >= 2:  # Only run the below if there are args
 
 if random_signature_course == True and course_number in [7, 8, 9]:
     # course_number = randint(7, 9)
-    max_try = 6
+    max_try = 3
 if afternoon_round == True:
     desired_tee_time = "02:"
 
@@ -120,6 +120,19 @@ course_booking_days_out = {
     10: 2,
 }
 
+course_booking_days_out_when_false = {
+    1: 7,
+    2: 7,
+    3: 7,
+    4: 7,
+    5: 7,
+    6: 7,
+    7: 10,
+    8: 10,
+    9: 10,
+    10: 1,
+}
+
 if is_testing_mode == False:
     begin_time = time(18, 59, 40)
     end_time = time(19, 7)
@@ -127,7 +140,10 @@ if is_testing_mode == False:
 # Defaults to 10, 7, 1 days out based on course
 if auto_select_date_based_on_course:
     today = date.today()
-    days_out = course_booking_days_out[course_number]
+    if is_testing_mode == False:
+        days_out = course_booking_days_out[course_number]
+    else:
+        days_out = course_booking_days_out_when_false[course_number]
     future_date = today + timedelta(days=days_out)
     reservation_day = future_date.day
 
@@ -150,6 +166,27 @@ def check_current_time() -> Tuple[time, bool]:
     dt_now = datetime.now()
     current_time = time(dt_now.hour, dt_now.minute, dt_now.second)
     return current_time, (begin_time <= current_time) and (current_time < end_time)
+
+
+def checkForErrorPopUp(driver) -> bool:
+    wait = WebDriverWait(driver, 6)
+    overlayErrorMessage = wait.until(
+        EC.presence_of_element_located((By.CLASS_NAME, "cdk-global-overlay-wrapper"))
+    )
+    if overlayErrorMessage:
+        overlay_popup_error = True
+        if is_testing_mode == False:
+            sendEmailMessage(
+                "Unable to book tee time",
+                f"Overlay popup error when trying to book on course {course_number}. ",
+            )
+            # logError("No slots")
+        else:
+            print(f"Overlay popup error on course {course_number}")
+        return True
+    else:
+        print("no error message")
+        return False
 
 
 # SELECT SLOT BY FIRST AVAILABLE TEE TIME
@@ -454,8 +491,15 @@ def make_a_reservation() -> bool:
         ):
             try:
                 if element.is_displayed():
-                    sendErrorMessage("No slots found")
-                    logError("No slots")
+                    if is_testing_mode == False:
+                        sendEmailMessage(
+                            "Unable to book tee time",
+                            f"No slots found on course {course_number}. Course not available",
+                        )
+                        # logError("No slots")
+                    else:
+                        print(f"No slots found on course {course_number}")
+                    slots_unavailable_error = True
                     return False
                     break
             except Exception as e:
@@ -478,7 +522,7 @@ def make_a_reservation() -> bool:
                             if selectedSlot == True:
                                 break
                     except Exception as e:
-                        print(f"select tee time had an error {e}")
+                        print(f"Select tee time had an error {e}")
                         return False
                         break
                 else:
@@ -500,7 +544,7 @@ def make_a_reservation() -> bool:
                         print(
                             f"Unable to book a tee time. No available tee times on {course_number}"
                         )
-                        no_tee_time_error = True
+                        tee_times_unavailable_error = True
                         return False
                         break
         else:
@@ -542,12 +586,10 @@ def make_a_reservation() -> bool:
                         or scrollTimes >= 20
                     ):
                         if is_testing_mode == False:
-                            del msg["subject"]
-                            msg["Subject"] = "Booking A Tee Time Issue"
-                            msg.set_content(
-                                f"Unable to book specified tee time. Tee times on {course_number} not availalbe for day {reservation_day}"
+                            sendEmailMessage(
+                                "Booking A Tee Time Issue",
+                                f"Unable to book specified tee time. Tee times on {course_number} not availalbe for day {reservation_day}",
                             )
-                            server.send_message(msg)
                         else:
                             print(
                                 f"Unable to book specified tee time. Tee times on {course_number} not availalbe"
@@ -611,6 +653,7 @@ def make_a_reservation() -> bool:
         shoppingCont = driver.find_element(By.CLASS_NAME, "shopping-cart-container")
         buttons = shoppingCont.find_elements(By.TAG_NAME, "button")
         buttonIndex = int(1)  ## cancel by default
+        # Find proceed button
         for i in range(len(buttons)):
             button = buttons[i]
             try:
@@ -634,13 +677,15 @@ def make_a_reservation() -> bool:
                 buttons[buttonIndex].click()
             else:
                 print(f"Proceed button not active. Could mean an overlapping tee time")
-                del msg["subject"]
-                msg["Subject"] = "Booking A Tee Time Issue"
-                msg.set_content(
-                    f"Unable to book a tee time. May be an overlapping tee time on {course_number}"
+                sendEmailMessage(
+                    "Booking A Tee Time Issue",
+                    f"Unable to book a tee time. May be an overlapping tee time on {course_number}",
                 )
-                server.send_message(msg)
                 return False
+            # check if the overlay error box popped up
+            # errorMessageFound = checkForErrorPopUp(driver)
+            # if errorMessageFound == True:
+            #     return False
         except Exception as e:
             print(f"Can't click proceed button. Breaking out of the loop. Error: {e}")
             return False
@@ -695,8 +740,10 @@ def make_a_reservation() -> bool:
 # check the time
 def try_booking() -> None:
     global try_num
-    global no_tee_time_error
+    global tee_times_unavailable_error  # set to true when there is an error booking a tee time
     global course_number
+    global slots_unavailable_error  # Set to True when course is unavilable
+    global overlay_popup_error
     """
     Try booking a reservation until either one reservation is made successfully or the attempt time reaches the max_try
     """
@@ -704,7 +751,9 @@ def try_booking() -> None:
     current_time, is_during_running_time = check_current_time()
     reservation_completed = False
     try_num = 1
-    no_tee_time_error = False
+    tee_times_unavailable_error = False
+    slots_unavailable_error = False
+    overlay_popup_error = False
 
     if book_first_avail == True:
         tee_time = "first available"
@@ -714,12 +763,10 @@ def try_booking() -> None:
         tee_time = desired_tee_time
 
     if is_testing_mode == False:
-        del msg["subject"]
-        msg["Subject"] = "Booking A Tee Time"
-        msg.set_content(
-            f"Tee time bot starting {current_time}: {tee_time} tee time on course No. {course_number} on day {reservation_day} for {num_of_players}"
+        sendEmailMessage(
+            "Booking A Tee Time",
+            f"Starting at {current_time} for {tee_time} tee time on course No. {course_number} on day {reservation_day} for {num_of_players}",
         )
-        server.send_message(msg)
     else:
         print("*********** TESTING MODE ON **************")
 
@@ -745,68 +792,91 @@ def try_booking() -> None:
                 continue
 
             print(
-                f"----- try : {try_num} for {tee_time} tee time on course No. {course_number} on day {reservation_day} for {num_of_players} players -----"
+                f"----- try #{try_num} for {tee_time} tee time on course No. {course_number} on day {reservation_day} for {num_of_players} players -----"
             )
             print(f"The current time is {current_time}")
             # try to get tee time
             reservation_completed = make_a_reservation()
-
+            print(f"reservation status {reservation_completed}")
             # If no errors
             if reservation_completed:
                 current_time, is_during_running_time = check_current_time()
                 if is_testing_mode == False:
-                    del msg["subject"]
-                    msg["Subject"] = f"Tee Time is BOOKED!"
-                    msg.set_content(
-                        f"Got {num_of_players} tee time(s) for {tee_time_info}.  Tried {try_num} time(s)."
+                    sendEmailMessage(
+                        "Tee Time is BOOKED!",
+                        f"Booked {num_of_players} tee time(s) for {tee_time_info}.  Tried {try_num} time(s).",
                     )
-                    server.send_message(msg)
                 else:
                     print(
                         f"----- Tee Time Reserved for {num_of_players} players: {tee_time_info} -----"
                     )
+                break
+            # stop trying if no slots found for course
+            elif slots_unavailable_error == True:
+                current_time, is_during_running_time = check_current_time()
+                print(f"No slots found for course {course_number}")
+                if is_testing_mode == False:
+                    sendEmailMessage(
+                        "Booking Issue: Course Not Open",
+                        f"No slots on {course_number} for day {reservation_day}.  Tried {try_num} time(s).",
+                    )
+                else:
+                    print(
+                        f"No slots on {course_number} for day {reservation_day}.  Tried {try_num} time(s)."
+                    )
+                    sleep(10)
+                break
+            # stop trying if overlaying pop up error was found
+            elif overlay_popup_error == True:
+                print(f"Overlay pop up error for course {course_number}")
+                if is_testing_mode == False:
+                    sendEmailMessage(
+                        "Booking Issue: Overlay pop up error",
+                        f"Unable to proceed on {course_number} for day {reservation_day}.  Tried {try_num} time(s).",
+                    )
+                else:
+                    print(
+                        f"Unable to proceed on {course_number} for day {reservation_day}.  Tried {try_num} time(s)."
+                    )
+                    sleep(10)
                 break
             # stop trying if max_try is reached
             elif try_num >= max_try:
                 current_time, is_during_running_time = check_current_time()
                 print(f"Tried {try_num} times, but couldn't get the tee time...")
                 if is_testing_mode == False:
-                    del msg["subject"]
-                    if no_tee_time_error == True:
-                        msg["Subject"] = "Booking Issue: No Tee Times"
-                        msg.set_content(
-                            f"Unable to book a tee time. No available tee times on {course_number} for day {reservation_day}.  Tried {try_num} time(s)."
+                    if tee_times_unavailable_error == True:
+                        sendEmailMessage(
+                            "Booking Issue: No Tee Times Available",
+                            f"No available tee times on {course_number} for day {reservation_day}.  Tried {try_num} time(s).",
                         )
                     else:
-                        msg["Subject"] = "Unable to Book A Tee Time"
-                        msg.set_content(
-                            f"Unable to book a tee time for {tee_time} tee time on course No. {course_number} on day {reservation_day} for {num_of_players}. Bot stopped at {current_time}.  Tried {try_num} time(s)."
+                        sendEmailMessage(
+                            "Unable to Book A Tee Time",
+                            f"Unable to book a tee time for {tee_time} tee time on course No. {course_number} on day {reservation_day} for {num_of_players}. Bot stopped at {current_time}.  Tried {try_num} time(s).",
                         )
-                    server.send_message(msg)
                 else:
                     print(
                         f"Unable to book a tee time for {tee_time} tee time on course No. {course_number} on day {reservation_day} for {num_of_players}. Bot stopped at {current_time}"
                     )
                     sleep(10)
                 break
-            # if errors try again
             else:
                 # if random sig course, try next sig course
-                if (
-                    random_signature_course == True
-                    and course_number in [7, 8, 9]
-                    and course_number % 2 != 0
-                ):
+                if random_signature_course == True and course_number in [7, 8, 9]:
                     course_number = 7 if course_number == 9 else course_number + 1
-                    no_tee_time_error == False
-                try_num += 1
-                current_time, is_during_running_time = check_current_time()
+                    tee_times_unavailable_error = False  # resets for next course
+                    try_num += 1
+                    print("Trying next signature course")
+                else:
+                    print("Bot Stopped")
+                    break
     except Exception as e:
         if is_testing_mode == False:
-            del msg["subject"]
-            msg["Subject"] = "Unable to Book A Tee Time"
-            msg.set_content(f"Unable to book a tee time on {course_number}. {e}")
-            server.send_message(msg)
+            sendEmailMessage(
+                "Error: Unable to Book A Tee Time",
+                f"Unable to book a tee time on {course_number}. {e}",
+            )
         print(f"Unable to book a tee time: {e}")
         return False
     finally:
