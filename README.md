@@ -71,3 +71,10 @@ $ poetry new projectName
 $ poetry add packageName
 $ poetry install
 ```
+
+### setting up the crontab
+Logs are found here: You have mail in /var/mail/kathyle
+```
+# Book the cradle for Fridays
+57 18 * * 3 /Users/kathyle/Documents/git/personal/pcc-tee-times/run.sh 10 False True True 2 False
+```

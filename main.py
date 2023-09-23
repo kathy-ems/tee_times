@@ -334,10 +334,13 @@ def make_a_reservation() -> bool:
     if is_testing_mode == False:
         options.add_argument("--headless")
 
-    driver = webdriver.Chrome(
-        service=Service(ChromeDriverManager(version="114.0.5735.90").install()),
-        options=options,
-    )
+    # driver = webdriver.Chrome(
+    #     service=Service(ChromeDriverManager(version="114.0.5735.90").install()),
+    #     options=options,
+    # )
+    service = Service()
+    options = webdriver.ChromeOptions()
+    driver = webdriver.Chrome(service=service, options=options)
 
     def click_reservation_date(driver) -> None:
         td_days = driver.find_elements(
