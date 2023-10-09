@@ -39,7 +39,7 @@ Modeled after [this](https://medium.com/@ryujimorita.1009/how-i-built-a-booking-
 ### Troubleshooting
 Error: Selenium modual is not installed
 
-Try to get out of virtual env (use poetry instead)
+To get out of virtual env (use poetry instead)
 ```
 $ deactivate
 ```
@@ -48,6 +48,9 @@ If Poetry is not correct version 1.4.2
 ```
 $ poetry -V
 $ export PATH="/Users/kathyle/.local/bin:$PATH"
+```
+
+To use virtual environemnt (preferred method)
 ```
 $ source ./.venv/bin/activate
 $ pip3 uninstall selenium
