@@ -2,7 +2,7 @@
 
 
 ## Getting Started
-Install python 3.9
+Install python 3.9 then set then start the venv
 
 ```
 $ python3.9 -m venv .venv
@@ -27,6 +27,7 @@ $ python3 main.py [<courseNum>] [<testingBool>] [<firstAvailableBool>] [<autosel
 Run it with Poetry
 
 ```
+$ deactivate
 $ set -o allexport; source .env; set +o allexport
 $ poetry run python3 main.py [<courseNum>] [<testingBool>] [<firstAvailableBool>] [<autoselectdateBool>] [<numOfPlayers>] [<randomSignatureCourseBool>] [<afternoon_round>]
 ```
@@ -79,5 +80,5 @@ $ poetry install
 Logs are found here: You have mail in /var/mail/kathyle
 ```
 # Book the cradle for Fridays
-57 18 * * 3 /Users/kathyle/Documents/git/personal/pcc-tee-times/run.sh 10 False True True 2 False
+57 18 * * WED /Users/kathyems/Dropbox/git/pcc-tee-times/run.sh 10 False True True 2 False
 ```

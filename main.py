@@ -57,9 +57,10 @@ def sendEmailMessage(subject, message) -> None:
 ############################################################################################
 # Be Sure to set all these params prior to running application                            #
 ############################################################################################
+# begin_time = time(18,59,55) # example
+
 begin_time = time(1, 0)  # When should it start reserving a tee time
-# begin_time = time(18,59,55) # When should it start reserving a tee time
-end_time = time(19, 7, 0)  # When should it stop trying to get a tee time
+end_time = time(23, 7, 0)  # When should it stop trying to get a tee time
 max_try = 2  # change back to 500 when working
 is_current_month = True  # False when reservation_day is for next month
 desired_tee_time = "08:27 AM"  # tee time in this format 'hh:mm AM'
@@ -134,8 +135,19 @@ course_booking_days_out_when_false = {
 }
 
 if is_testing_mode == False:
+    ## Pacific ##
     begin_time = time(18, 59, 40)
+    begin_time2 = time(18, 59, 39)
+    begin_time3 = time(18, 59, 38)
+    click_time_slots = time(19, 0, 0)
     end_time = time(19, 7)
+
+    ## EASTERN ##
+    # begin_time = time(21, 59, 40)
+    # begin_time2 = time(21, 59, 39)
+    # begin_time3 = time(21, 59, 38)
+    # click_time_slots = time(22, 0, 0)
+    # end_time = time(22, 7)
 
 # Defaults to 10, 7, 1 days out based on course
 if auto_select_date_based_on_course:
@@ -189,10 +201,10 @@ def checkForErrorPopUp(driver) -> bool:
         return False
 
 
-# SELECT SLOT BY FIRST AVAILABLE TEE TIME
+## SELECT SLOT BY FIRST AVAILABLE TEE TIME
 def select_slot_by_first_available(driver) -> bool:
     try:
-        # obtain all open slots and find desired slot
+        ## obtain all open slots and find desired slot
         allAvlSlots = driver.find_elements(
             By.CLASS_NAME, "available-slot:not(.booked-slot)"
         )
@@ -201,10 +213,10 @@ def select_slot_by_first_available(driver) -> bool:
                 chips = slot.find_elements(By.CLASS_NAME, "player-chip-detail")
                 available_spots = 4 - len(chips)
                 if available_spots >= num_of_players:
-                    # Click BOOK in the target slot
+                    ## Click BOOK in the target slot
                     slot.find_element(By.CLASS_NAME, "submit-button").click()
                     sleep(1)
-                    # selects number of players from drop down
+                    ## selects number of players from drop down
                     guestPane = driver.find_element(By.CLASS_NAME, "guest-container")
                     player_options = guestPane.find_elements(By.TAG_NAME, "li")
                     player_options[num_of_players - 1].click()
@@ -222,7 +234,7 @@ def select_slot_by_first_available(driver) -> bool:
         return False
 
 
-# SELECT SLOT BY TEE TIME
+## SELECT SLOT BY TEE TIME
 def select_slot_by_tee_time(driver) -> None:
     try:
         slotIndex = int(0)
@@ -231,7 +243,7 @@ def select_slot_by_tee_time(driver) -> None:
             By.CLASS_NAME, "available-slot:not(.booked-slot)"
         )
         for i, slot in enumerate(allAvlSlots):
-            # GET BY TEE TIME
+            ## GET BY TEE TIME
             try:
                 div = slot.find_element(By.CLASS_NAME, "schedule-time")
                 if div.text == desired_tee_time:
@@ -248,7 +260,7 @@ def select_slot_by_tee_time(driver) -> None:
         ## Click BOOK in the target slot
         allAvlSlots[slotIndex].find_element(By.CLASS_NAME, "submit-button").click()
         sleep(0.5)  # Wait for players window to open
-        # selects number of players
+        ## selects number of players
         guestPane = driver.find_element(By.CLASS_NAME, "guest-container")
         player_options = guestPane.find_elements(By.TAG_NAME, "li")
         player_options[num_of_players - 1].click()
@@ -257,7 +269,7 @@ def select_slot_by_tee_time(driver) -> None:
         print("Waiting extra time for players to load")
         try:
             sleep(0.5)  # Wait for players window to open
-            # selects number of players
+            ## selects number of players
             guestPane = driver.find_element(By.CLASS_NAME, "guest-container")
             player_options = guestPane.find_elements(By.TAG_NAME, "li")
             player_options[num_of_players - 1].click()
@@ -267,7 +279,7 @@ def select_slot_by_tee_time(driver) -> None:
             return False
 
 
-# SELECT AFTERNOON TEE TIME
+## SELECT AFTERNOON TEE TIME
 def select_afternoon_tee_time(driver) -> None:
     try:
         ## obtain all open slots and find desired slot
@@ -281,9 +293,9 @@ def select_afternoon_tee_time(driver) -> None:
                     chips = slot.find_elements(By.CLASS_NAME, "player-chip-detail")
                     available_spots = 4 - len(chips)
                     if available_spots >= num_of_players:
-                        # Click BOOK in the target slot
+                        ## Click BOOK in the target slot
                         slot.find_element(By.CLASS_NAME, "submit-button").click()
-                        # selects number of players from drop down
+                        ## selects number of players from drop down
                         guestPane = driver.find_element(
                             By.CLASS_NAME, "guest-container"
                         )
@@ -297,17 +309,11 @@ def select_afternoon_tee_time(driver) -> None:
             print(f"No tee times found with {desired_tee_time}")
             return False
 
-        sleep(0.5)  # Wait for players window to open
-        # selects number of players
-        guestPane = driver.find_element(By.CLASS_NAME, "guest-container")
-        player_options = guestPane.find_elements(By.TAG_NAME, "li")
-        player_options[num_of_players - 1].click()
-        return None
     except Exception as e:
         print("Waiting extra time for players to load")
         try:
             sleep(0.5)  # Wait for players window to open
-            # selects number of players
+            ## selects number of players
             guestPane = driver.find_element(By.CLASS_NAME, "guest-container")
             player_options = guestPane.find_elements(By.TAG_NAME, "li")
             player_options[num_of_players - 1].click()
@@ -319,7 +325,7 @@ def select_afternoon_tee_time(driver) -> None:
             return False
 
 
-# Once the time, make the tee time
+## Once the time, make the tee time
 def make_a_reservation() -> bool:
     """
     Make a reservation for the given time and name at the booking site.
@@ -329,17 +335,13 @@ def make_a_reservation() -> bool:
     starting_bot = datetime.now()
     bot_start_time = starting_bot
     options = Options()
+    options.page_load_strategy = 'normal'
 
-    # comment out this line to see the process in chrome
+    ## comment out this line to see the process in chrome
     if is_testing_mode == False:
-        options.add_argument("--headless")
+        options.add_argument("--headless=new") # runs the process without a browswer
 
-    # driver = webdriver.Chrome(
-    #     service=Service(ChromeDriverManager(version="114.0.5735.90").install()),
-    #     options=options,
-    # )
     service = Service()
-    options = webdriver.ChromeOptions()
     driver = webdriver.Chrome(service=service, options=options)
 
     def click_reservation_date(driver) -> None:
@@ -349,13 +351,13 @@ def make_a_reservation() -> bool:
         td_days[reservation_day - 1].click()
         return driver
 
-    # MAIN PAGE
+    ## MAIN PAGE
     try:
         driver.get(os.environ.get("URL"))
         wait = WebDriverWait(driver, 10)
         element = wait.until(EC.presence_of_element_located((By.ID, "mat-input-3")))
 
-        # fill in the username and password
+        ## fill in the username and password
         input_box = driver.find_element(By.ID, "mat-input-2")
         input_box.clear()
         input_box.send_keys(os.environ.get("USERNAME"))
@@ -367,7 +369,7 @@ def make_a_reservation() -> bool:
         print(f"Unable to log in: {e}")
         return False
 
-    # COURSE LISTINGS PAGE
+    ## COURSE LISTINGS PAGE
     try:
         sleep(1)  # Wait to let page load before navigating to new page
         driver.get(os.environ.get("TEESHEET_URL"))
@@ -387,10 +389,10 @@ def make_a_reservation() -> bool:
             print(f"Unable to select course: {e}")
             return False
 
-    # TEE SHEET WITH TEE TIMES
+    ## TEE SHEET WITH TEE TIMES
     try:
         sleep(1.75)  ## Wait to let page load
-        # Open end tee time calendar
+        ## Open end tee time calendar
         date_inputs = driver.find_elements(By.TAG_NAME, "input")
         date_inputs[1].click()
     except Exception as e:
@@ -402,9 +404,17 @@ def make_a_reservation() -> bool:
             date_inputs = driver.find_elements(By.TAG_NAME, "input")
             date_inputs[1].click()
         except Exception as e:
-            print(f"Unable to select 1st end date: {e}")  # Errored out here 3/29
+            print("Allowing double extra time for Tee Sheet with tee times to load")
+            try:
+                sleep(
+                    3
+                )  # Common spot for page to take a long time loading; allowing extra time
+                date_inputs = driver.find_elements(By.TAG_NAME, "input")
+                date_inputs[1].click()
+            except Exception as e:
+                print(f"Unable to select 1st end date: {e}")  # Errored out here 3/29
             return False
-    # change end date to next month
+    ## change end date to next month
     if is_current_month == False:
         try:
             next_month = driver.find_element(
@@ -463,19 +473,18 @@ def make_a_reservation() -> bool:
         elapsed_time("At GET SLOTS")
         # get slots
         time_to_click_slots = False
-        # only click Get Slots when it's 19:00
+        # only click Get Slots when it's 19:00 Pacific
         while time_to_click_slots == False and is_testing_mode == False:
             current_time, is_during_running_time = check_current_time()
-            time_to_click_slots = (time(19, 0, 0) <= current_time) and (
+            time_to_click_slots = (click_time_slots <= current_time) and (
                 current_time < end_time
             )
-            # time_to_click_slots = (time(15,21,0) <= current_time) and (current_time < time(15,40,55))
         driver.find_element(By.CLASS_NAME, "submit-button").click()
     except Exception as e:
         print(f"Unable to click get slots: {e}")
         return False
 
-    # CLICK BOOK & SELECT NUM OF PLAYERS IN TEE SHEET
+    ## CLICK BOOK & SELECT NUM OF PLAYERS IN TEE SHEET
     try:
         sleep(1)  ## Wait to let page refresh
         root_element = driver.find_element(By.TAG_NAME, "app-root")
@@ -679,12 +688,15 @@ def make_a_reservation() -> bool:
             if enabled_buttons > 1:
                 buttons[buttonIndex].click()
             else:
-                print(f"Proceed button not active. Could mean an overlapping tee time")
-                sendEmailMessage(
-                    "Booking A Tee Time Issue",
-                    f"Unable to book a tee time. May be an overlapping tee time on {course_number}",
-                )
-                return False
+                if is_testing_mode == True:
+                    print(f"Proceed button not active. Could mean an overlapping tee time")
+                else:
+                    print(f"Proceed button not active. Could mean an overlapping tee time")
+                    sendEmailMessage(
+                        "Booking A Tee Time Issue",
+                        f"Unable to book a tee time. May be an overlapping tee time on {course_number}",
+                    )
+                    return False
             # check if the overlay error box popped up
             # errorMessageFound = checkForErrorPopUp(driver)
             # if errorMessageFound == True:
@@ -782,10 +794,10 @@ def try_booking() -> None:
                 )
 
                 # sleep less as the time gets close to the begin_time, 19:00 (7pm pacific/10pm eastern)
-                if current_time >= time(18, 59, 40):
+                if current_time >= begin_time:
                     # if current_time >= time(10,14,54):
                     sleep(0.001)
-                elif time(18, 59, 38) <= current_time < time(18, 59, 39):
+                elif begin_time3 <= current_time < begin_time2:
                     # elif time(10,14,52) <= current_time < time(10,14,54):
                     sleep(0.5)
                 else:
