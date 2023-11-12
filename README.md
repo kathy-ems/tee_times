@@ -82,3 +82,12 @@ Logs are found here: You have mail in /var/mail/kathyle
 # Book the cradle for Fridays
 57 18 * * WED /Users/kathyems/Dropbox/git/pcc-tee-times/run.sh 10 False True True 2 False
 ```
+
+### Wake Mac for cron job to run
+```
+sudo pmset repeat wakeorpoweron MTWRFSU 21:55:00
+```
+To cancel wake
+```
+sudo pmset repeat cancel
+```

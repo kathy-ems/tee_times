@@ -20,6 +20,8 @@ import smtplib
 from email.message import EmailMessage
 
 load_dotenv()
+HOST_NAME = os.environ.get("HOST_NAME")
+
 
 # Set up the email parameters
 EMAIL_ADDRESS = os.environ.get("EMAIL")
@@ -134,20 +136,29 @@ course_booking_days_out_when_false = {
     10: 1,
 }
 
+if is_testing_mode == True:
+    ## TESTING TIMES ##
+    begin_time = time(0, 59, 40)
+    begin_time2 = time(0, 59, 39)
+    begin_time3 = time(0, 59, 38)
+    click_time_slots = time(17, 00, 0)
+    end_time = time(23, 59, 59)
+
 if is_testing_mode == False:
+    print('Setting Time zone')
     ## Pacific ##
-    begin_time = time(18, 59, 40)
-    begin_time2 = time(18, 59, 39)
-    begin_time3 = time(18, 59, 38)
-    click_time_slots = time(19, 0, 0)
-    end_time = time(19, 7)
+    # begin_time = time(18, 59, 40)
+    # begin_time2 = time(18, 59, 39)
+    # begin_time3 = time(18, 59, 38)
+    # click_time_slots = time(19, 0, 0)
+    # end_time = time(19, 7)
 
     ## EASTERN ##
-    # begin_time = time(21, 59, 40)
-    # begin_time2 = time(21, 59, 39)
-    # begin_time3 = time(21, 59, 38)
-    # click_time_slots = time(22, 0, 0)
-    # end_time = time(22, 7)
+    begin_time = time(21, 59, 40)
+    begin_time2 = time(21, 59, 39)
+    begin_time3 = time(21, 59, 38)
+    click_time_slots = time(22, 0, 0)
+    end_time = time(22, 7)
 
 # Defaults to 10, 7, 1 days out based on course
 if auto_select_date_based_on_course:
@@ -479,7 +490,8 @@ def make_a_reservation() -> bool:
             time_to_click_slots = (click_time_slots <= current_time) and (
                 current_time < end_time
             )
-        driver.find_element(By.CLASS_NAME, "submit-button").click()
+        else:
+            driver.find_element(By.CLASS_NAME, "submit-button").click()
     except Exception as e:
         print(f"Unable to click get slots: {e}")
         return False
@@ -759,6 +771,7 @@ def try_booking() -> None:
     global course_number
     global slots_unavailable_error  # Set to True when course is unavilable
     global overlay_popup_error
+
     """
     Try booking a reservation until either one reservation is made successfully or the attempt time reaches the max_try
     """
@@ -780,7 +793,7 @@ def try_booking() -> None:
     if is_testing_mode == False:
         sendEmailMessage(
             "Booking A Tee Time",
-            f"Starting at {current_time} for {tee_time} tee time on course No. {course_number} on day {reservation_day} for {num_of_players}",
+            f"Starting at {current_time} for {tee_time} tee time on course No. {course_number} on day {reservation_day} for {num_of_players} ({HOST_NAME})",
         )
     else:
         print("*********** TESTING MODE ON **************")
