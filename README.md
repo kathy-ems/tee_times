@@ -6,12 +6,20 @@ Install python 3.9 then set then start the venv
 
 ```
 $ python3.9 -m venv .venv
-$ poetry install
 ```
 
 ```
 $ chmod 777 run.sh
 ```
+
+Install Selenium, webdriver-manager, and joblib into .venv (TODO: use requirements.txt)
+```
+pip3 install selenium
+pip3 install webdriver-manager
+pip3 install joblib
+```
+
+Ask a fellow engineer for the .env
 
 ## To Run Application
 Set all the params for creating a tee time in the top of `main.py` then run the below commands
@@ -40,18 +48,12 @@ Modeled after [this](https://medium.com/@ryujimorita.1009/how-i-built-a-booking-
 ### Troubleshooting
 Error: Selenium modual is not installed
 
-To get out of virtual env (use poetry instead)
+To get out of virtual env (use poetry or global installs instead)
 ```
 $ deactivate
 ```
 
-If Poetry is not correct version 1.4.2
-```
-$ poetry -V
-$ export PATH="/Users/kathyle/.local/bin:$PATH"
-```
-
-To use virtual environemnt (preferred method)
+To use non-poetry virtual environemnt (preferred method)
 ```
 $ source ./.venv/bin/activate
 $ pip3 uninstall selenium
@@ -59,7 +61,6 @@ $ pip3 install selenium
 $ echo $VIRTUAL_ENV
 $ source activate $VIRTUAL_ENV
 ```
-
 
 ### Notes on creating a brand new poetry python project
 
@@ -74,6 +75,12 @@ Create a new poetry project with virtual environment .venv with Poetry
 $ poetry new projectName
 $ poetry add packageName
 $ poetry install
+```
+
+If Poetry is not correct version 1.4.2
+```
+$ poetry -V
+$ export PATH="/Users/kathyle/.local/bin:$PATH"
 ```
 
 ### setting up the crontab
