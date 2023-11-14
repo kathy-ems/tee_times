@@ -135,6 +135,7 @@ course_booking_days_out_when_false = {
     9: 10,
     10: 1,
 }
+timezone = 'testing'
 
 if is_testing_mode == True:
     ## TESTING TIMES ##
@@ -145,20 +146,23 @@ if is_testing_mode == True:
     end_time = time(23, 59, 59)
 
 if is_testing_mode == False:
-    print('Setting Time zone')
-    ## Pacific ##
-    # begin_time = time(18, 59, 40)
-    # begin_time2 = time(18, 59, 39)
-    # begin_time3 = time(18, 59, 38)
-    # click_time_slots = time(19, 0, 0)
-    # end_time = time(19, 7)
-
     ## EASTERN ##
     begin_time = time(21, 59, 40)
     begin_time2 = time(21, 59, 39)
     begin_time3 = time(21, 59, 38)
     click_time_slots = time(22, 0, 0)
     end_time = time(22, 7)
+    timezone = 'eastern'
+
+    ## Pacific ##
+    # begin_time = time(18, 59, 40)
+    # begin_time2 = time(18, 59, 39)
+    # begin_time3 = time(18, 59, 38)
+    # click_time_slots = time(19, 0, 0)
+    # end_time = time(19, 7)
+    timezone = 'pacific'
+
+print(f"Timezone: {timezone}")
 
 # Defaults to 10, 7, 1 days out based on course
 if auto_select_date_based_on_course:
