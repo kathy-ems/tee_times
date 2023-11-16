@@ -135,7 +135,7 @@ course_booking_days_out_when_false = {
     9: 10,
     10: 1,
 }
-timezone = 'testing'
+timezone = "testing"
 
 if is_testing_mode == True:
     ## TESTING TIMES ##
@@ -152,15 +152,16 @@ if is_testing_mode == False:
     begin_time3 = time(21, 59, 38)
     click_time_slots = time(22, 0, 0)
     end_time = time(22, 7)
-    timezone = 'eastern'
+    timezone = "eastern"
 
-    ## Pacific ##
-    # begin_time = time(18, 59, 40)
-    # begin_time2 = time(18, 59, 39)
-    # begin_time3 = time(18, 59, 38)
-    # click_time_slots = time(19, 0, 0)
-    # end_time = time(19, 7)
-    timezone = 'pacific'
+    if HOST_NAME == "Work_computer":
+        ## Pacific ##
+        begin_time = time(18, 59, 40)
+        begin_time2 = time(18, 59, 39)
+        begin_time3 = time(18, 59, 38)
+        click_time_slots = time(19, 0, 0)
+        end_time = time(19, 7)
+        timezone = "pacific"
 
 print(f"Timezone: {timezone}")
 
@@ -350,11 +351,11 @@ def make_a_reservation() -> bool:
     starting_bot = datetime.now()
     bot_start_time = starting_bot
     options = Options()
-    options.page_load_strategy = 'normal'
+    options.page_load_strategy = "normal"
 
     ## comment out this line to see the process in chrome
     if is_testing_mode == False:
-        options.add_argument("--headless=new") # runs the process without a browswer
+        options.add_argument("--headless=new")  # runs the process without a browswer
 
     service = Service()
     driver = webdriver.Chrome(service=service, options=options)
@@ -705,9 +706,13 @@ def make_a_reservation() -> bool:
                 buttons[buttonIndex].click()
             else:
                 if is_testing_mode == True:
-                    print(f"Proceed button not active. Could mean an overlapping tee time")
+                    print(
+                        f"Proceed button not active. Could mean an overlapping tee time"
+                    )
                 else:
-                    print(f"Proceed button not active. Could mean an overlapping tee time")
+                    print(
+                        f"Proceed button not active. Could mean an overlapping tee time"
+                    )
                     sendEmailMessage(
                         "Booking A Tee Time Issue",
                         f"Unable to book a tee time. May be an overlapping tee time on {course_number}",
