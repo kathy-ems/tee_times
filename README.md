@@ -12,11 +12,17 @@ $ python3.9 -m venv .venv
 $ chmod 777 run.sh
 ```
 
-Install Selenium, webdriver-manager, and joblib into .venv (TODO: use requirements.txt)
+Install Selenium, webdriver-manager, and joblib into .venv 
 ```
 pip3 install selenium
 pip3 install webdriver-manager
 pip3 install joblib
+```
+
+(TODO: use requirements.txt)
+To install all dependencis via requirements.txt
+```
+pip install -r requirements.txt
 ```
 
 Ask a fellow engineer for the .env
@@ -66,6 +72,7 @@ $ source activate $VIRTUAL_ENV
 
 If you've never used poetry before run this:
 
+This will manage the dependencies in the .venv file
 ```
 $ poetry config virtualenvs.in-project true
 ```
