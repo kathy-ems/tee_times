@@ -65,6 +65,7 @@ begin_time = time(1, 0)  # When should it start reserving a tee time
 end_time = time(23, 7, 0)  # When should it stop trying to get a tee time
 max_try = 2  # change back to 500 when working
 is_current_month = True  # False when reservation_day is for next month
+is_previous_month = False # True when reservation happens at the end of the month and needs to be moved back a month
 desired_tee_time = "08:27 AM"  # tee time in this format 'hh:mm AM'
 course_number = int(3)  # course No; cradle is 10
 book_first_avail = True  # True books the first available tee time on this course
@@ -168,15 +169,20 @@ print(f"Timezone: {timezone}")
 # Defaults to 10, 7, 1 days out based on course
 if auto_select_date_based_on_course:
     today = date.today()
+    print(today)
     if is_testing_mode == False:
         days_out = course_booking_days_out[course_number]
     else:
         days_out = course_booking_days_out_when_false[course_number]
     future_date = today + timedelta(days=days_out)
     reservation_day = future_date.day
+    default_end_date = today + timedelta(days=5)
 
     if today.month != future_date.month:
         is_current_month = False
+
+    if today.day > default_end_date.day:
+        is_previous_month = True
 
 
 def elapsed_time(message) -> None:
@@ -430,6 +436,16 @@ def make_a_reservation() -> bool:
             except Exception as e:
                 print(f"Unable to select 1st end date: {e}")  # Errored out here 3/29
             return False
+    ## change end date to this month (go back when at end of month)
+    if is_previous_month == True:
+        try:
+            previous_month = driver.find_element(
+                By.CSS_SELECTOR, "button.mat-calendar-previous-button"
+            )
+            previous_month.click()
+        except Exception as e:
+            print("Unable to select next month for end date", e)
+            return False
     ## change end date to next month
     if is_current_month == False:
         try:
@@ -570,9 +586,16 @@ def make_a_reservation() -> bool:
                         == scroll_height
                         or scrollTimes >= 20
                     ):
-                        print(
-                            f"Unable to book a tee time. No available tee times on {course_number}"
-                        )
+                        if is_testing_mode == False:
+                            sendEmailMessage(
+                                "Unable to book tee time",
+                                f"Scrolled {scrollTimes} times. No slots found on course {course_number}. Course not available",
+                            )
+                            # logError("No slots")
+                        else:
+                            print(
+                                f"Scrolled {scrollTimes} times. Unable to book a tee time. No available tee times on {course_number}"
+                            )
                         tee_times_unavailable_error = True
                         return False
                         break
@@ -617,16 +640,22 @@ def make_a_reservation() -> bool:
                         if is_testing_mode == False:
                             sendEmailMessage(
                                 "Booking A Tee Time Issue",
-                                f"Unable to book specified tee time. Tee times on {course_number} not availalbe for day {reservation_day}",
+                                f"Scrolled {scrollTimes} times. Unable to book specified tee time. Tee times on {course_number} not availalbe for day {reservation_day}",
                             )
                         else:
                             print(
-                                f"Unable to book specified tee time. Tee times on {course_number} not availalbe"
+                                f"Scrolled {scrollTimes} times. Unable to book specified tee time. Tee times on {course_number} not availalbe"
                             )
                         return False
                         break
     except Exception as e:
-        print(f"Unable to find and book number of players {e}")
+        if is_testing_mode == False:
+            sendEmailMessage(
+                "Unable to book tee time",
+                f"Error: {e}",
+            )
+        else:
+            print(f"Unable to find and book number of players {e}")
         return False
 
     # GUEST INFO PAGE / SHOPPING CART
@@ -841,7 +870,7 @@ def try_booking() -> None:
                 if is_testing_mode == False:
                     sendEmailMessage(
                         "Tee Time is BOOKED!",
-                        f"Booked {num_of_players} tee time(s) for {tee_time_info}.  Tried {try_num} time(s).",
+                        f"Booked {num_of_players} tee time(s) for {tee_time_info}.  Tried {try_num} time(s). ~{HOST_NAME}",
                     )
                 else:
                     print(
