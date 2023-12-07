@@ -707,6 +707,17 @@ def make_a_reservation() -> bool:
                 innermost_div_element = inner_div_element.find_element(
                     By.TAG_NAME, "div"
                 )
+            try:
+                guestInfoCont = innermost_div_element.find_element(
+                    By.CLASS_NAME, "guest-info-container"
+                )
+                elements = guestInfoCont.find_elements(
+                    By.CLASS_NAME, "mat-icon.mat-icon"
+                )
+                elements[1].click()
+            except Exception as e:
+                sleep(1) ## allow extra time
+                print("Allowing extra time to select players")
                 guestInfoCont = innermost_div_element.find_element(
                     By.CLASS_NAME, "guest-info-container"
                 )
@@ -715,7 +726,14 @@ def make_a_reservation() -> bool:
                 )
                 elements[1].click()
         except Exception as e:
-            print(f"Unable to select {num_of_players} of players {e}")
+            if is_testing_mode == True:
+                print(f"Unable to select {num_of_players} of players {e}")
+            else:
+                print(f"Unable to select {num_of_players} of players {e}")
+                sendEmailMessage(
+                    "Booking A Tee Time Issue",
+                    f"Unable to select {num_of_players} players on {course_number}",
+                )
             return False
 
     try:
