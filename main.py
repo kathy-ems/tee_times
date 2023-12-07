@@ -51,7 +51,7 @@ def logError(message) -> None:
 
 def sendEmailMessage(subject, message) -> None:
     del msg["subject"]
-    msg["Subject"] = subject
+    msg["Subject"] = f"{subject}: {HOST_NAME}"
     msg.set_content(message)
     server.send_message(msg)
 
@@ -523,8 +523,25 @@ def make_a_reservation() -> bool:
         root_element = driver.find_element(By.TAG_NAME, "app-root")
         inner_div_element = root_element.find_element(By.TAG_NAME, "div")
         innermost_div_element = inner_div_element.find_element(By.TAG_NAME, "div")
-        # Get the scroll container element
-        scrollCont = innermost_div_element.find_element(By.ID, "scrollContainer")
+        try: 
+            # Get the scroll container element
+            scrollCont = innermost_div_element.find_element(By.ID, "scrollContainer")
+        except Exception as e:
+            try: 
+                sleep(2) ## give extra time to find scroll element
+                root_element = driver.find_element(By.TAG_NAME, "app-root")
+                inner_div_element = root_element.find_element(By.TAG_NAME, "div")
+                innermost_div_element = inner_div_element.find_element(By.TAG_NAME, "div")
+                scrollCont = innermost_div_element.find_element(By.ID, "scrollContainer")
+            except Exception as e:
+                if is_testing_mode == False:
+                    sendEmailMessage(
+                        "Unable to book tee time",
+                        f"Error scrolling on {HOST_NAME}: {e}",
+                    )
+                else:
+                    print(f"Unable to find scroll element {e}")
+                return False
         # Get the height of the scroll container
         scroll_height = driver.execute_script(
             "return arguments[0].scrollHeight", scrollCont
@@ -652,7 +669,7 @@ def make_a_reservation() -> bool:
         if is_testing_mode == False:
             sendEmailMessage(
                 "Unable to book tee time",
-                f"Error: {e}",
+                f"Error on {HOST_NAME}: {e}",
             )
         else:
             print(f"Unable to find and book number of players {e}")
