@@ -461,8 +461,8 @@ def make_a_reservation() -> bool:
         sleep(1)
         click_reservation_date(driver)
     except Exception as e:
+        print("Allowing extra time for 2nd end date picker")
         try:
-            print("Allowing extra time for 2nd end date picker")
             sleep(1)  # Allow extra time if needed
             # select end date in date picker
             click_reservation_date(driver)
@@ -490,8 +490,8 @@ def make_a_reservation() -> bool:
         # select start date in date picker
         click_reservation_date(driver)
     except Exception as e:
+        print("Allowing extra time for start tee time picker")
         try:
-            print("Allowing extra time for start tee time picker")
             sleep(1)  # allow extra time if needed
             # Open start tee time Calendar
             date_inputs = driver.find_elements(By.TAG_NAME, "input")
@@ -527,7 +527,8 @@ def make_a_reservation() -> bool:
             # Get the scroll container element
             scrollCont = innermost_div_element.find_element(By.ID, "scrollContainer")
         except Exception as e:
-            try: 
+            try:
+                print("Allowing extra time for scroll element")
                 sleep(2) ## give extra time to find scroll element
                 root_element = driver.find_element(By.TAG_NAME, "app-root")
                 inner_div_element = root_element.find_element(By.TAG_NAME, "div")
@@ -716,8 +717,8 @@ def make_a_reservation() -> bool:
                 )
                 elements[1].click()
             except Exception as e:
-                sleep(1) ## allow extra time
                 print("Allowing extra time to select players")
+                sleep(1) ## allow extra time
                 guestInfoCont = innermost_div_element.find_element(
                     By.CLASS_NAME, "guest-info-container"
                 )
