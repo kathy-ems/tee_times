@@ -51,7 +51,7 @@ def logError(message) -> None:
 
 def sendEmailMessage(subject, message) -> None:
     del msg["subject"]
-    msg["Subject"] = f"{subject}: {HOST_NAME}"
+    msg["Subject"] = f"{subject} ({HOST_NAME})"
     msg.set_content(message)
     server.send_message(msg)
 
@@ -527,9 +527,9 @@ def make_a_reservation() -> bool:
             # Get the scroll container element
             scrollCont = innermost_div_element.find_element(By.ID, "scrollContainer")
         except Exception as e:
+            print("Allowing extra time for scroll element")
             try:
-                print("Allowing extra time for scroll element")
-                sleep(2) ## give extra time to find scroll element
+                sleep(1) ## give extra time to find scroll element
                 root_element = driver.find_element(By.TAG_NAME, "app-root")
                 inner_div_element = root_element.find_element(By.TAG_NAME, "div")
                 innermost_div_element = inner_div_element.find_element(By.TAG_NAME, "div")
@@ -538,7 +538,7 @@ def make_a_reservation() -> bool:
                 if is_testing_mode == False:
                     sendEmailMessage(
                         "Unable to book tee time",
-                        f"Error scrolling on {HOST_NAME}: {e}",
+                        f"Allow extra time for scroll failed: {e}",
                     )
                 else:
                     print(f"Unable to find scroll element {e}")
@@ -867,7 +867,7 @@ def try_booking() -> None:
     if is_testing_mode == False:
         sendEmailMessage(
             "Booking A Tee Time",
-            f"Starting at {current_time} for {tee_time} tee time on course No. {course_number} on day {reservation_day} for {num_of_players} ({HOST_NAME})",
+            f"Starting at {current_time} for {tee_time} tee time on course No. {course_number} on day {reservation_day} for {num_of_players}",
         )
     else:
         print("*********** TESTING MODE ON **************")
@@ -906,7 +906,7 @@ def try_booking() -> None:
                 if is_testing_mode == False:
                     sendEmailMessage(
                         "Tee Time is BOOKED!",
-                        f"Booked {num_of_players} tee time(s) for {tee_time_info}.  Tried {try_num} time(s). ~{HOST_NAME}",
+                        f"Booked {num_of_players} tee time(s) for {tee_time_info}.  Tried {try_num} time(s).",
                     )
                 else:
                     print(
