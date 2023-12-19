@@ -153,12 +153,6 @@ if is_testing_mode == True:
 
 if is_testing_mode == False:
     ## EASTERN ##
-    # begin_time = time(21, 59, 40)
-    # begin_time2 = time(21, 59, 39)
-    # begin_time3 = time(21, 59, 38)
-    # end_time = time(22, 7)
-    timezone = "eastern"
-
     begin_time = time(22, 00, 00)
     begin_time2 = time(21, 59, 59)
     begin_time3 = time(21, 59, 58)
@@ -363,8 +357,6 @@ def make_a_reservation() -> bool:
     Return the status if the reservation is made successfully or not.
     """
     global tee_time_info
-    # starting_bot = datetime.now()
-    # bot_start_time = starting_bot
     options = Options()
     options.page_load_strategy = "normal"
 
@@ -514,7 +506,6 @@ def make_a_reservation() -> bool:
     # only click Get Slots when it's 19:00 Pacific
     current_time, is_during_running_time = check_current_time()
     while is_during_running_time == False:
-        # repeat booking a reservation every second
         if not is_during_running_time:
             print(
                 f"Not Running the program. It is {current_time} and not between {begin_time} and {end_time}"
@@ -522,10 +513,8 @@ def make_a_reservation() -> bool:
 
             # sleep less as the time gets close to the begin_time, 19:00 (7pm pacific/10pm eastern)
             if current_time >= begin_time:
-                # if current_time >= time(10,14,54):
                 sleep(0.001)
             elif begin_time3 <= current_time < begin_time2:
-                # elif time(10,14,52) <= current_time < time(10,14,54):
                 sleep(0.5)
             else:
                 sleep(1)
@@ -640,7 +629,6 @@ def make_a_reservation() -> bool:
                             )
                         tee_times_unavailable_error = True
                         return False
-                        break
         else:
             selectedPlayer = False
             scrollTimes = 1
@@ -661,7 +649,6 @@ def make_a_reservation() -> bool:
                     except Exception as e:
                         print(f"select tee time had an error {e}")
                         return False
-                        break
                 else:
                     print("Scrolling -- Looking for specific tee time")
                     scrollTimes += 1
@@ -689,7 +676,6 @@ def make_a_reservation() -> bool:
                                 f"Scrolled {scrollTimes} times. Unable to book specified tee time. Tee times on {course_number} not availalbe"
                             )
                         return False
-                        break
     except Exception as e:
         if is_testing_mode == False:
             sendEmailMessage(
