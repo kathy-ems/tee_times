@@ -65,7 +65,7 @@ begin_time = time(1, 0)  # When should it start reserving a tee time
 end_time = time(23, 7, 0)  # When should it stop trying to get a tee time
 max_try = 2  # change back to 500 when working
 is_current_month = True  # False when reservation_day is for next month
-is_previous_month = False # True when reservation happens at the end of the month and needs to be moved back a month
+is_previous_month = False  # True when reservation happens at the end of the month and needs to be moved back a month
 desired_tee_time = "08:27 AM"  # tee time in this format 'hh:mm AM'
 course_number = int(3)  # course No; cradle is 10
 book_first_avail = True  # True books the first available tee time on this course
@@ -535,17 +535,21 @@ def make_a_reservation() -> bool:
         root_element = driver.find_element(By.TAG_NAME, "app-root")
         inner_div_element = root_element.find_element(By.TAG_NAME, "div")
         innermost_div_element = inner_div_element.find_element(By.TAG_NAME, "div")
-        try: 
+        try:
             # Get the scroll container element
             scrollCont = innermost_div_element.find_element(By.ID, "scrollContainer")
         except Exception as e:
             print("Allowing extra time for scroll element")
             try:
-                sleep(1) ## give extra time to find scroll element
+                sleep(1)  ## give extra time to find scroll element
                 root_element = driver.find_element(By.TAG_NAME, "app-root")
                 inner_div_element = root_element.find_element(By.TAG_NAME, "div")
-                innermost_div_element = inner_div_element.find_element(By.TAG_NAME, "div")
-                scrollCont = innermost_div_element.find_element(By.ID, "scrollContainer")
+                innermost_div_element = inner_div_element.find_element(
+                    By.TAG_NAME, "div"
+                )
+                scrollCont = innermost_div_element.find_element(
+                    By.ID, "scrollContainer"
+                )
             except Exception as e:
                 if is_testing_mode == False:
                     sendEmailMessage(
@@ -728,7 +732,7 @@ def make_a_reservation() -> bool:
                 elements[1].click()
             except Exception as e:
                 print("Allowing extra time to select players")
-                sleep(1) ## allow extra time
+                sleep(1)  ## allow extra time
                 guestInfoCont = innermost_div_element.find_element(
                     By.CLASS_NAME, "guest-info-container"
                 )
@@ -743,7 +747,7 @@ def make_a_reservation() -> bool:
                 print(f"Unable to select {num_of_players} of players {e}")
                 sendEmailMessage(
                     "Booking A Tee Time Issue",
-                    f"Unable to select {num_of_players} players on {course_number}",
+                    f"Unable to select {num_of_players} players on course No. {course_number}",
                 )
             return False
 
