@@ -161,7 +161,7 @@ if is_testing_mode == False:
 
     if HOST_NAME == "Work_computer":
         ## Pacific ##
-        begin_time = time(18, 00, 00)
+        begin_time = time(19, 00, 00)
         begin_time2 = time(18, 59, 59)
         begin_time3 = time(18, 59, 58)
         end_time = time(19, 7)
