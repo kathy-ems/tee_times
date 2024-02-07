@@ -225,38 +225,85 @@ def checkForErrorPopUp(driver) -> bool:
         print("no error message")
         return False
 
+## GIVEN A SLOT, CHOOSES THE APPORPIATE PLAYERS TO BOOK; WAITS 3 SECONDS IF SLOT IS ON HOLD
+def select_players_dropdown(driver, slot) -> bool:
+    try:
+        chips = slot.find_elements(By.CLASS_NAME, "player-chip-detail")
+        available_spots = 4 - len(chips)
+        if available_spots >= num_of_players:
+            ## Click BOOK in the target slot
+            slot.find_element(By.CLASS_NAME, "submit-button").click()
+            sleep(1)
+            ## selects number of players from drop down
+            guestPane = driver.find_element(By.CLASS_NAME, "guest-container")
+            player_options = guestPane.find_elements(By.TAG_NAME, "li")
+            player_options[num_of_players - 1].click()
+            ## CHECK IF NAVIGATE TO SHOPPING CART SUCCESSFUL
+            sleep(1)  ## Wait to let page load
+            wait = WebDriverWait(driver, 10)
+            element = wait.until(
+                EC.presence_of_element_located((By.CLASS_NAME, "loader-hidden"))
+            )
+            if driver.current_url != 'https://pinehurstmembers.com/booking/golf/guestinfo':
+                print(f"Unable to advance to shopping cart after selecting players: Means tee time is on hold: {slot.text}")
+                if is_testing_mode == False:
+                    sendEmailMessage(
+                        "Tee time on hold",
+                        f"Unable to advance to shopping cart after selecting players: Means tee time {slot.text} is on hold",
+                    )
+                sleep(3)
+            return False
+        else:
+            ### return true if successfully navigated to shopping cart after selecting players
+            return True
+    except Exception as e:
+        print('Select_player_dropdown error', {e})
+        return False
 
 ## SELECT SLOT BY FIRST AVAILABLE TEE TIME
 def select_slot_by_first_available(driver) -> bool:
-    try:
-        ## obtain all open slots and find desired slot
-        allAvlSlots = driver.find_elements(
+    count = 0
+    slotCount = len(driver.find_elements(
             By.CLASS_NAME, "available-slot:not(.booked-slot)"
-        )
-        for slot in allAvlSlots:
+        ))
+    while count < slotCount:
+        if count > 0 and is_testing_mode == False:
+            sendEmailMessage(
+                "Trying next tee time",
+                f"Trying next tee time {slot.text}",
+            )
+        try:
+            ## obtain all open slots and choose an open slot
+            allAvlSlots = driver.find_elements(
+                By.CLASS_NAME, "available-slot:not(.booked-slot)"
+            )
+            slot = allAvlSlots[count]
             try:
-                chips = slot.find_elements(By.CLASS_NAME, "player-chip-detail")
-                available_spots = 4 - len(chips)
-                if available_spots >= num_of_players:
-                    ## Click BOOK in the target slot
-                    slot.find_element(By.CLASS_NAME, "submit-button").click()
-                    sleep(1)
-                    ## selects number of players from drop down
-                    guestPane = driver.find_element(By.CLASS_NAME, "guest-container")
-                    player_options = guestPane.find_elements(By.TAG_NAME, "li")
-                    player_options[num_of_players - 1].click()
-                    return True
+                success = select_players_dropdown(driver, slot)
+                if success == False:
+                    count = count + 1
+                else: 
+                    break
             except Exception as e:
+                print("Trying next tee time", {slot.text})
+                count = count + 1
+                success = select_players_dropdown(driver, slot)
+                if success == False:
+                    break
                 try:
                     sleep(30)
                 except Exception as e:
                     print(f"Select players for first available had an error: {e}")
-                    return False
-        else:
-            return False
-    except Exception as e:
-        print(f"Checking first available tee time error {e}")
-        return False
+                    break
+            break
+        except Exception as e:
+            print(f"Checking first available tee time error {e}")
+            if is_testing_mode == False:
+                sendEmailMessage(
+                    "Unable to select players",
+                    f"Unable to Scroll to select players No {course_number}: {e}",
+                )
+    return False
 
 
 ## SELECT SLOT BY TEE TIME
@@ -278,6 +325,11 @@ def select_slot_by_tee_time(driver) -> None:
                     break
             except Exception as e:
                 print(f"First available tee time error {e}")
+                if is_testing_mode == False:
+                    sendEmailMessage(
+                        "Unable to book tee time",
+                        f"First available tee time error: {e}",
+                    )
                 return False
         else:
             print(f"The available tee time was not found")
@@ -289,6 +341,7 @@ def select_slot_by_tee_time(driver) -> None:
         guestPane = driver.find_element(By.CLASS_NAME, "guest-container")
         player_options = guestPane.find_elements(By.TAG_NAME, "li")
         player_options[num_of_players - 1].click()
+        ## Check if on the same page or if selecting players was successful
         return None
     except Exception as e:
         print("Waiting extra time for players to load")
@@ -409,8 +462,19 @@ def make_a_reservation() -> bool:
             allBookButtons = driver.find_elements(By.CLASS_NAME, "book__now__btn")
             allBookButtons[course_number - 1].click()
         except Exception as e:
-            print(f"Unable to select course: {e}")
-            return False
+            print("Allowing double extra time for course listing page to load")
+            try:
+                sleep(1)  # Allow extra time for page to load
+                allBookButtons = driver.find_elements(By.CLASS_NAME, "book__now__btn")
+                allBookButtons[course_number - 1].click()
+            except Exception as e:
+                print(f"Unable to select course: {e}")
+                if is_testing_mode == False:
+                    sendEmailMessage(
+                        "Unable to select course",
+                        f"Unable to select course No {course_number}: {e}",
+                    )
+                return False
 
     ## TEE SHEET WITH TEE TIMES
     try:
@@ -435,8 +499,13 @@ def make_a_reservation() -> bool:
                 date_inputs = driver.find_elements(By.TAG_NAME, "input")
                 date_inputs[1].click()
             except Exception as e:
-                print(f"Unable to select 1st end date: {e}")  # Errored out here 3/29
-            return False
+                print(f"Unable to select 1st end date: {e}")  # Errored out here 3/29/23 & 2/6/24 (on second course try)
+                if is_testing_mode == False:
+                    sendEmailMessage(
+                        "Unable to select 1st end date",
+                        f"Unable to select 1st end date for course No {course_number}. {e}",
+                    )
+                return False
     ## change end date to this month (go back when at end of month)
     if is_previous_month == True:
         try:
@@ -588,51 +657,54 @@ def make_a_reservation() -> bool:
 
         # SEARCH FOR FIRST AVAIALABLE OR BOOK BY TEE TIME/AFTERNOON ROUND
         if book_first_avail == True and afternoon_round == False:
-            selectedSlot = False
+            selectedSlotSuccess = False
             scrollTimes = 1
             # Scroll through the container until the desired tee time is found or until you've reached the bottom
-            while not selectedSlot:
-                for element in driver.find_elements(
-                    By.XPATH, f"//*[contains(text(), 'BOOK')]"
-                ):
-                    try:
-                        if element.is_displayed():
-                            elapsed_time(f"Booking Slot Now {datetime.now()}")
-                            selectedSlot = select_slot_by_first_available(driver)
-                            if selectedSlot == True:
-                                break
-                    except Exception as e:
-                        print(f"Select tee time had an error {e}")
-                        return False
-                        break
-                else:
-                    print("Scrolling -- Looking for available tee time")
-                    scrollTimes += 1
-                    # If the element was not found, scroll the container
-                    driver.execute_script(
-                        "arguments[0].scrollTop += arguments[0].offsetHeight",
-                        scrollCont,
-                    )
-                    # Check if you've reached the bottom of the container or exceeded scroll times
-                    if (
-                        driver.execute_script(
-                            f"return arguments[0].scrollTop", scrollCont
+            for element in driver.find_elements(
+                By.XPATH, f"//*[contains(text(), 'BOOK')]"
+            ):
+                try:
+                    if element.is_displayed() and selectedSlotSuccess == False:
+                        elapsed_time(f"Booking Slot Now {datetime.now()}")
+                        selectedSlotSuccess = select_slot_by_first_available(driver)
+                        if selectedSlotSuccess == True:
+                            break
+                except Exception as e:
+                    print(f"Select first/afternoon tee time had an error {e}")
+                    if is_testing_mode == False:
+                        sendEmailMessage(
+                            "Unable to book tee time",
+                            f"Unable to book on course No {course_number}: {e}",
                         )
-                        == scroll_height
-                        or scrollTimes >= 20
-                    ):
-                        if is_testing_mode == False:
-                            sendEmailMessage(
-                                "Unable to book tee time",
-                                f"Scrolled {scrollTimes} times. No slots found on course {course_number}. Course not available",
-                            )
-                            # logError("No slots")
-                        else:
-                            print(
-                                f"Scrolled {scrollTimes} times. Unable to book a tee time. No available tee times on {course_number}"
-                            )
-                        tee_times_unavailable_error = True
-                        return False
+                    return False
+            else:
+                print("Scrolling -- Looking for available tee time")
+                scrollTimes += 1
+                # If the element was not found, scroll the container
+                driver.execute_script(
+                    "arguments[0].scrollTop += arguments[0].offsetHeight",
+                    scrollCont,
+                )
+                # Check if you've reached the bottom of the container or exceeded scroll times
+                if (
+                    driver.execute_script(
+                        f"return arguments[0].scrollTop", scrollCont
+                    )
+                    == scroll_height
+                    or scrollTimes >= 20
+                ):
+                    if is_testing_mode == False:
+                        sendEmailMessage(
+                            "Unable to book tee time",
+                            f"Scrolled {scrollTimes} times. No slots found on course {course_number}. Course not available",
+                        )
+                        # logError("No slots")
+                    else:
+                        print(
+                            f"Scrolled {scrollTimes} times. Unable to book a tee time. No available tee times on {course_number}"
+                        )
+                    tee_times_unavailable_error = True
+                    return False
         else:
             selectedPlayer = False
             scrollTimes = 1
@@ -687,17 +759,11 @@ def make_a_reservation() -> bool:
                 f"Error on {HOST_NAME}: {e}",
             )
         else:
-            print(f"Unable to find and book number of players {e}")
+            print(f"Unable to find and book number of players: {e}")
         return False
 
     # GUEST INFO PAGE / SHOPPING CART
     try:
-        sleep(1)  ## Wait to let page load
-        wait = WebDriverWait(driver, 10)
-        element = wait.until(
-            EC.presence_of_element_located((By.CLASS_NAME, "loader-hidden"))
-        )
-        # Choose extra players
         if num_of_players == 2:
             root_element = driver.find_element(By.TAG_NAME, "app-root")
             inner_div_element = root_element.find_element(By.TAG_NAME, "div")
@@ -965,6 +1031,11 @@ def try_booking() -> None:
                     tee_times_unavailable_error = False  # resets for next course
                     try_num += 1
                     print("Trying next signature course")
+                    if is_testing_mode == False:
+                        sendEmailMessage(
+                            "Book A Tee Time on next course ",
+                            f"Trying next course No {course_number}.",
+                        )
                 else:
                     print("Bot Stopped")
                     break
