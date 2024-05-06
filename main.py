@@ -697,6 +697,13 @@ def make_a_reservation() -> bool:
         element = wait.until(
             EC.presence_of_element_located((By.CLASS_NAME, "loader-hidden"))
         )
+        if driver.current_url != 'https://pinehurstmembers.com/booking/golf/guestinfo':
+            print(f"Unable to advance to shopping cart after selecting players: Means tee time is on hold: {course_number}")
+            if is_testing_mode == False:
+                sendEmailMessage(
+                    "Tee time on hold",
+                    f"Unable to advance to shopping cart after selecting players: Means tee time {course_number} is on hold",
+                )
         # Choose extra players
         if num_of_players == 2:
             root_element = driver.find_element(By.TAG_NAME, "app-root")
