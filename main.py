@@ -715,6 +715,7 @@ def make_a_reservation() -> bool:
             elements = guestInfoCont.find_elements(By.CLASS_NAME, "mat-icon.mat-icon")
             elements[elementNum].click()
         
+        # Loop through and book extra players
         if num_of_players >= 2:
             i = num_of_players
             while i > 1:
