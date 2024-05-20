@@ -705,7 +705,7 @@ def make_a_reservation() -> bool:
                     f"Unable to advance to shopping cart after selecting players: Means tee time {course_number} is on hold",
                 )
         # Choose extra players
-        if num_of_players == 2:
+        def book_extra_players(elementNum) -> None:
             root_element = driver.find_element(By.TAG_NAME, "app-root")
             inner_div_element = root_element.find_element(By.TAG_NAME, "div")
             innermost_div_element = inner_div_element.find_element(By.TAG_NAME, "div")
@@ -713,7 +713,14 @@ def make_a_reservation() -> bool:
                 By.CLASS_NAME, "guest-info-container"
             )
             elements = guestInfoCont.find_elements(By.CLASS_NAME, "mat-icon.mat-icon")
-            elements[1].click()
+            elements[elementNum].click()
+        
+        if num_of_players >= 2:
+            i = num_of_players
+            while i > 1:
+                print(i)
+                i -= 1
+                book_extra_players(i)
     except Exception as e:
         print("Allowing extra time for Guest Info Shopping Cart to load")
         try:
