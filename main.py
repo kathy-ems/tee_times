@@ -66,14 +66,14 @@ end_time = time(23, 7, 0)  # When should it stop trying to get a tee time
 max_try = 2  # change back to 500 when working
 is_current_month = True  # False when reservation_day is for next month
 is_previous_month = False  # True when reservation happens at the end of the month and needs to be moved back a month
-desired_tee_time = "08:27 AM"  # tee time in this format 'hh:mm AM'
-course_number = int(3)  # course No; cradle is 10
+desired_tee_time = "10:00 AM"  # tee time in this format 'hh:mm AM'
+course_number = int(4)  # course No; cradle is 10
 book_first_avail = True  # True books the first available tee time on this course
-num_of_players = int(2)  # Only allows 1-2 players at the moment
+num_of_players = int(4)  # Only allows 1-4 players at the moment
 is_testing_mode = (
     True  # True will not book the round & will show browser window (not be headless)
 )
-reservation_day = int(12)  # day of current month to book
+reservation_day = int(29)  # day of current month to book
 auto_select_date_based_on_course = (
     False  # True sets the days out for booking window based on course
 )
@@ -81,6 +81,7 @@ random_signature_course = False  # True randomly chooses course No 7-9
 afternoon_round = (
     True  # True picks tee time automatically in the afternoon for No 2, No 4
 )
+book_guests = False  # True picks guest list to book guests
 ############################################################################################
 
 if len(sys.argv) >= 2:  # Only run the below if there are args
@@ -101,12 +102,15 @@ if len(sys.argv) >= 2:  # Only run the below if there are args
     afternoon_round = (
         True if len(sys.argv) >= 8 and sys.argv[7] == "True" else False
     )  # bool
+    book_guests = (
+        True if len(sys.argv) >= 9 and sys.argv[8] == "True" else False
+    )  # bool
 
 if random_signature_course == True and course_number in [7, 8, 9]:
     # course_number = randint(7, 9)
     max_try = 3
 if afternoon_round == True:
-    desired_tee_time = "02:"
+    desired_tee_time = "09:3"
 
 bot_start_time = datetime.now()
 bot_stop_time = datetime.now()
@@ -224,7 +228,6 @@ def checkForErrorPopUp(driver) -> bool:
     else:
         print("no error message")
         return False
-
 
 ## SELECT SLOT BY FIRST AVAILABLE TEE TIME
 def select_slot_by_first_available(driver) -> bool:
@@ -502,7 +505,7 @@ def make_a_reservation() -> bool:
         except Exception as e:
             print(f"Unable to select start date in picker: {e}")
             return False
-    elapsed_time(f"At GET SLOTS: {datetime.now()}")
+    elapsed_time(f"Waiting at GET SLOTS: {datetime.now()}")
     # only click Get Slots when it's 19:00 Pacific
     current_time, is_during_running_time = check_current_time()
     while is_during_running_time == False:
@@ -524,14 +527,14 @@ def make_a_reservation() -> bool:
         break
     try:
         driver.find_element(By.CLASS_NAME, "submit-button").click()
-        elapsed_time(f"Clicked Book at: {datetime.now()}")
+        elapsed_time(f"Clicked GET SLOTS at: {datetime.now()}")
     except Exception as e:
         print(f"Unable to click get slots: {e}")
         return False
-
+        
     ## CLICK BOOK & SELECT NUM OF PLAYERS IN TEE SHEET
     try:
-        sleep(1)  ## Wait to let page refresh
+        sleep(.2)  ## Wait to let page refresh
         root_element = driver.find_element(By.TAG_NAME, "app-root")
         inner_div_element = root_element.find_element(By.TAG_NAME, "div")
         innermost_div_element = inner_div_element.find_element(By.TAG_NAME, "div")
@@ -539,9 +542,10 @@ def make_a_reservation() -> bool:
             # Get the scroll container element
             scrollCont = innermost_div_element.find_element(By.ID, "scrollContainer")
         except Exception as e:
-            print("Allowing extra time for scroll element")
+            if is_testing_mode == True:
+                print("Allowing extra time for scroll element")
             try:
-                sleep(1)  ## give extra time to find scroll element
+                sleep(.1)  ## allowing extra time to find scroll element
                 root_element = driver.find_element(By.TAG_NAME, "app-root")
                 inner_div_element = root_element.find_element(By.TAG_NAME, "div")
                 innermost_div_element = inner_div_element.find_element(
@@ -551,14 +555,40 @@ def make_a_reservation() -> bool:
                     By.ID, "scrollContainer"
                 )
             except Exception as e:
-                if is_testing_mode == False:
-                    sendEmailMessage(
-                        "Unable to book tee time",
-                        f"Allow extra time for scroll failed: {e}",
+                if is_testing_mode == True:
+                    print("Allowing extra time for scroll element")
+                try:
+                    sleep(.2)  ## allowing extra time to find scroll element
+                    root_element = driver.find_element(By.TAG_NAME, "app-root")
+                    inner_div_element = root_element.find_element(By.TAG_NAME, "div")
+                    innermost_div_element = inner_div_element.find_element(
+                        By.TAG_NAME, "div"
                     )
-                else:
-                    print(f"Unable to find scroll element {e}")
-                return False
+                    scrollCont = innermost_div_element.find_element(
+                        By.ID, "scrollContainer"
+                    )
+                except Exception as e:
+                    if is_testing_mode == True:
+                        print("Allowing extra time for scroll element")
+                    try:
+                        sleep(.5)  ## allowing extra time to find scroll element
+                        root_element = driver.find_element(By.TAG_NAME, "app-root")
+                        inner_div_element = root_element.find_element(By.TAG_NAME, "div")
+                        innermost_div_element = inner_div_element.find_element(
+                            By.TAG_NAME, "div"
+                        )
+                        scrollCont = innermost_div_element.find_element(
+                            By.ID, "scrollContainer"
+                        )
+                    except Exception as e:
+                        if is_testing_mode == False:
+                            sendEmailMessage(
+                                "Unable to book tee time",
+                                f"Allow extra time for scroll failed: {e}",
+                            )
+                        else:
+                            print(f"Unable to find scroll element {e}")
+                        return False
         # Get the height of the scroll container
         scroll_height = driver.execute_script(
             "return arguments[0].scrollHeight", scrollCont
@@ -570,6 +600,7 @@ def make_a_reservation() -> bool:
         ):
             try:
                 if element.is_displayed():
+                    elapsed_time(f"Done checking if No Slots found {datetime.now()}")
                     if is_testing_mode == False:
                         sendEmailMessage(
                             "Unable to book tee time",
@@ -580,11 +611,9 @@ def make_a_reservation() -> bool:
                         print(f"No slots found on course {course_number}")
                     slots_unavailable_error = True
                     return False
-                    break
             except Exception as e:
                 print(f"There are no slot error {e}")
                 return False
-                break
 
         # SEARCH FOR FIRST AVAIALABLE OR BOOK BY TEE TIME/AFTERNOON ROUND
         if book_first_avail == True and afternoon_round == False:
@@ -704,6 +733,19 @@ def make_a_reservation() -> bool:
                     "Tee time on hold",
                     f"Unable to advance to shopping cart after selecting players: Means tee time {course_number} is on hold",
                 )
+            ### TODO: loop back and try again.
+
+        ## Book Guests instead of members
+        if book_guests == True:
+            root_element = driver.find_element(By.TAG_NAME, "app-root")
+            inner_div_element = root_element.find_element(By.TAG_NAME, "div")
+            innermost_div_element = inner_div_element.find_element(By.TAG_NAME, "div")
+            guestInfoCont = innermost_div_element.find_element(
+                By.CLASS_NAME, "guest-info-container"
+            )
+            my_guest_tab = guestInfoCont.find_element(By.XPATH, f"//*[contains(text(), 'My Guest')]")
+            my_guest_tab.click()
+
         # Choose extra players
         def book_extra_players(elementNum) -> None:
             root_element = driver.find_element(By.TAG_NAME, "app-root")
@@ -712,6 +754,7 @@ def make_a_reservation() -> bool:
             guestInfoCont = innermost_div_element.find_element(
                 By.CLASS_NAME, "guest-info-container"
             )
+
             elements = guestInfoCont.find_elements(By.CLASS_NAME, "mat-icon.mat-icon")
             elements[elementNum].click()
         
@@ -719,7 +762,6 @@ def make_a_reservation() -> bool:
         if num_of_players >= 2:
             i = num_of_players
             while i > 1:
-                print(i)
                 i -= 1
                 book_extra_players(i)
     except Exception as e:
@@ -893,10 +935,15 @@ def try_booking() -> None:
     else:
         tee_time = desired_tee_time
 
+    if book_guests == True:
+        player_type = "guest(s)"
+    else:
+        player_type = "member(s)"
+
     if is_testing_mode == False:
         sendEmailMessage(
             "Booking A Tee Time",
-            f"Starting at {current_time} for {tee_time} tee time on course No. {course_number} on day {reservation_day} for {num_of_players}",
+            f"Starting at {current_time} for {tee_time} tee time on course No. {course_number} on day {reservation_day} for {num_of_players} {player_type}",
         )
     else:
         print("*********** TESTING MODE ON **************")
@@ -904,7 +951,7 @@ def try_booking() -> None:
     try:
         while True:
             print(
-                f"----- try #{try_num} for {tee_time} tee time on course No. {course_number} on day {reservation_day} for {num_of_players} players -----"
+                f"----- try #{try_num} for {tee_time} tee time on course No. {course_number} on day {reservation_day} for {num_of_players} {player_type} -----"
             )
             print(f"The current time is {current_time}")
             # try to get tee time
@@ -916,11 +963,11 @@ def try_booking() -> None:
                 if is_testing_mode == False:
                     sendEmailMessage(
                         "Tee Time is BOOKED!",
-                        f"Booked {num_of_players} tee time(s) for {tee_time_info}.  Tried {try_num} time(s).",
+                        f"Booked {num_of_players} {player_type} tee time(s) for {tee_time_info}.  Tried {try_num} time(s).",
                     )
                 else:
                     print(
-                        f"----- Tee Time Reserved for {num_of_players} players: {tee_time_info} -----"
+                        f"----- Tee Time Reserved for {num_of_players} {player_type}: {tee_time_info} -----"
                     )
                 break
             # stop trying if no slots found for course
